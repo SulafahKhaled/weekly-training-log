@@ -31,3 +31,14 @@ export function beepDone() {
   beep(660, 0.12, 0.14);
   beep(880, 0.18, 0.28);
 }
+export function beepTick() {
+  beep(440, 0.06);
+}
+
+export function vibrate(pattern) {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* vibration not available */
+  }
+}

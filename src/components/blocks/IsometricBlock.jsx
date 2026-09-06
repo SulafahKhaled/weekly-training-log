@@ -3,21 +3,25 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 import ExerciseShell from '../ExerciseShell';
 import VideoBlock from '../VideoBlock';
 import ProgressRing from '../ProgressRing';
+import FullscreenTimer from '../FullscreenTimer';
 import { useProgressContext } from '../../context/ProgressContext';
 import { fmtTime } from '../../lib/time';
 import { beepStart, beepEnd, beepDone } from '../../lib/audio';
 import { celebrate } from '../../lib/celebrate';
 
 const COLOR = { upper: ['var(--upper)', 'var(--upper-track)'], lower: ['var(--lower)', 'var(--lower-track)'], core: ['var(--core)', 'var(--core-track)'], hiit: ['var(--hiit)', 'var(--hiit-track)'] };
+const WASH = { upper: 'var(--upper-dim)', lower: 'var(--lower-dim)', core: 'var(--core-dim)', hiit: 'var(--hiit-dim)' };
 
 function initialState(block) {
-  return { holdIdx: 0, phase: 'hold', remaining: block.hold, running: false, complete: false };
+  return { holdIdx: 0, phase: 'hold', remaining: block.hold, running: false, complete: false, started: false };
 }
 
 export default function IsometricBlock({ day, block, bi }) {
   const { isSetDone, toggleSet } = useProgressContext();
   const [color, track] = COLOR[day.color] || COLOR.upper;
+  const wash = WASH[day.color] || WASH.upper;
   const [state, setState] = useState(() => initialState(block));
+  const [minimized, setMinimized] = useState(false);
 
   let done = 0;
   for (let s = 0; s < block.sets; s++) if (isSetDone(day.id, bi, s)) done++;
@@ -49,37 +53,61 @@ export default function IsometricBlock({ day, block, bi }) {
   }, [state.running]);
 
   function handleStart() {
+    setMinimized(false);
     if (state.running) {
       setState((s) => ({ ...s, running: false }));
       return;
     }
     if (state.complete) {
-      setState({ ...initialState(block), running: true });
+      setState({ ...initialState(block), running: true, started: true });
       beepStart();
       return;
     }
     beepStart();
-    setState((s) => ({ ...s, running: true }));
+    setState((s) => ({ ...s, running: true, started: true }));
   }
 
   function handleReset() {
     setState(initialState(block));
+    setMinimized(false);
   }
 
-  const hasStarted = state.holdIdx > 0 || state.remaining !== block.hold || state.phase !== 'hold';
-  const phaseLabel = state.complete ? 'Done! 🎉' : state.running ? (state.phase === 'hold' ? 'Hold!' : 'Rest') : hasStarted ? 'Paused' : 'Ready';
-  const progText = state.complete ? `${block.sets} of ${block.sets} complete` : `Hold ${Math.min(state.holdIdx + 1, block.sets)} of ${block.sets}`;
+  const phaseLabel = state.running ? (state.phase === 'hold' ? 'Hold!' : 'Rest') : state.started ? 'Paused' : 'Ready';
+  const progText = `Hold ${Math.min(state.holdIdx + 1, block.sets)} of ${block.sets}`;
   const ringTotal = state.phase === 'hold' ? block.hold : block.rest;
+  const showFullscreen = (state.started || state.complete) && !minimized;
 
   return (
     <ExerciseShell done={done === block.sets} en={block.en} ar={block.ar} meta={`${block.sets} holds × ${block.hold}s${block.note ? ' · ' + block.note : ''} · rest ${block.rest}s`}>
       <VideoBlock vid={block.vid} />
+
+      {showFullscreen && (
+        <FullscreenTimer
+          color={state.phase === 'hold' ? color : 'var(--text-faint)'}
+          track={state.phase === 'hold' ? track : 'rgba(20,22,30,0.08)'}
+          wash={wash}
+          phase={phaseLabel}
+          remaining={state.remaining}
+          total={ringTotal}
+          title={block.en}
+          titleAr={block.ar}
+          meta={progText}
+          paused={!state.running && !state.complete}
+          onTogglePause={handleStart}
+          onMinimize={() => setMinimized(true)}
+          complete={state.complete}
+          completeTitle="Done! 🎉"
+          completeSub={`${block.sets} of ${block.sets} holds complete`}
+          onDismissComplete={() => setMinimized(true)}
+        />
+      )}
+
       <div className="timerbox">
-        <div className="phase">{phaseLabel}</div>
+        <div className="phase">{state.complete ? 'Done! 🎉' : phaseLabel}</div>
         <ProgressRing fraction={state.complete ? 1 : state.remaining / ringTotal} size={140} stroke={8} color={state.phase === 'hold' ? color : 'var(--text-faint)'} track={state.phase === 'hold' ? track : 'rgba(20,22,30,0.08)'}>
           <span className="big">{fmtTime(state.complete ? 0 : state.remaining)}</span>
         </ProgressRing>
-        <div className="progress-txt">{progText}</div>
+        <div className="progress-txt">{state.complete ? `${block.sets} of ${block.sets} complete` : progText}</div>
         <div className="controls">
           <button className="btn-start" onClick={handleStart} style={state.running ? { background: 'var(--bg-card)', border: '1px solid var(--line)', color: 'var(--text)' } : undefined}>
             {state.complete ? (
@@ -95,7 +123,7 @@ export default function IsometricBlock({ day, block, bi }) {
             ) : (
               <>
                 <Play size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-                {hasStarted ? 'Resume' : 'Start'}
+                {state.started ? 'Resume' : 'Start'}
               </>
             )}
           </button>

@@ -46,7 +46,7 @@ export default function ResistanceBlock({ day, block, bi }) {
     >
       <VideoBlock vid={block.vid} />
       <div className="hint">Tap a set once you complete it. A {block.rest}s rest timer starts automatically. Weight is optional.</div>
-      <RestTimer seconds={block.rest} trigger={restTrigger} color={color} track={track} />
+      <RestTimer seconds={block.rest} trigger={restTrigger} exerciseName={block.en} color={color} track={track} wash={`var(--${day.color}-dim)`} />
       {Array.from({ length: block.sets }).map((_, s) => {
         const isDone = isSetDone(day.id, bi, s);
         const weightValue = isDone ? getSetWeight(day.id, bi, s) : (drafts[s] ?? '');
