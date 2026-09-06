@@ -1,18 +1,20 @@
 # Weekly Training Log
 
-A 7-day home-workout tracker (Sun–Sat: Upper / Lower / Core+Hip / HIIT), with guided timers, video demos, weight logging, and history — React + Vite frontend, Express + SQLite (via sql.js) backend, reachable across devices on your local network.
+A 7-day home-workout tracker (Sun–Sat: Upper / Lower / Core+Hip / HIIT), with guided timers, video demos, weight logging, and history — React + Vite frontend, Express + Postgres backend, with its own accounts so it can be shared with family or friends without mixing anyone's data.
 
-## Quick start
+**Live app:** https://files-tau-eosin.vercel.app
+
+## Quick start (local development)
 
 ```bash
 npm install
-npm start
+docker run -d --name wtl-postgres -e POSTGRES_PASSWORD=devpassword -e POSTGRES_DB=weekly_training_log -p 5432:5432 postgres:16-alpine
+cp .env.example .env   # then fill in SESSION_SECRET
+npm run dev
 ```
 
-Then open the URL printed in the terminal (`http://localhost:3001` on this computer, or the `Network` address on any other device on the same Wi-Fi).
+Pushing to `main` on GitHub auto-deploys to Vercel production.
 
-For active development with hot reload instead, use `npm run dev`.
-
-See **[documentation.md](documentation.md)** for full setup, cross-device access, troubleshooting, and feature details. See **[CLAUDE.md](CLAUDE.md)** for architecture notes if you're working on the code.
+See **[documentation.md](documentation.md)** for full setup, deployment details, and troubleshooting. See **[CLAUDE.md](CLAUDE.md)** for architecture notes if you're working on the code.
 
 The original static HTML/JS version (no database, single device only) is kept in [`legacy/`](legacy/) for reference.

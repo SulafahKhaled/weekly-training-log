@@ -1,95 +1,105 @@
 # Weekly Training Log — Documentation
 
-A 7-day home-workout tracker (Sun–Sat: Upper A, Lower A, HIIT, Core+Hip, Upper B, Lower B, HIIT), with guided timers, video demos, weight logging, and history — backed by a real database so your data survives across days, browsers, and devices.
+A 7-day home-workout tracker (Sun–Sat: Upper A, Lower A, HIIT, Core+Hip, Upper B, Lower B, HIIT), with guided timers, video demos, weight logging, and history. Deployed on Vercel with its own account system, so you can share it with family or friends and everyone's progress stays completely separate.
+
+**Live app:** https://files-tau-eosin.vercel.app
+**Source code:** https://github.com/SulafahKhaled/weekly-training-log
 
 ## Features
 
+- **Accounts** — each person creates their own username + password. All progress, weights, and history are private to that account; sharing the app link with someone else never mixes your data with theirs.
 - **All 7 days** from the plan, each with warm-up → exercises → cool-down, color-coded by category (Upper / Lower / Core+Hip / HIIT).
 - **Resistance exercises** — tap a set to check it off, optionally log the weight used (kg) right on the row. A rest timer starts automatically between sets.
 - **Isometric holds** (plank, wall sit, side plank, superman, hollow hold, etc.) — a ring timer runs hold → rest → hold automatically across all sets with audio cues, marking each one done as it finishes.
 - **HIIT circuits** (Tuesday/Saturday) — a work/rest interval timer cycles through all moves across 4 rounds, showing the current and next move, with a confetti celebration on completion.
 - **Video demos** — every exercise links a YouTube demo; tap to preview inline, nothing loads until you ask for it.
-- **Prepare & Recover** — every day screen shows a card for each muscle/joint that day trains, each with up to three tap-to-preview videos: a **Dynamic** warm-up (movement-based, before training), a **Mobility** drill (slow, controlled-range CARs work — the layer that builds real joint control, not just looseness), and a **Static** stretch (held, after training) — plus 2–3 tips per muscle. Not every muscle has all three (e.g. Neck only has a stretch); that's expected.
-- **Warm-up / Mobility / Cool-down tabs** — the same three layers as full browsable libraries (every region, joint, and muscle in the app), for general reference or a rest-day routine. The Mobility tab also has a weekly-bonus "Full-Body Primal Movement Flow" video not tied to any specific day.
+- **Prepare & Recover** — every day screen shows a card for each muscle/joint that day trains, each with up to three tap-to-preview videos: a **Dynamic** warm-up, a **Mobility** drill (CARs-style controlled range work), and a **Static** stretch — plus 2–3 tips per muscle.
+- **Warm-up / Mobility / Cool-down tabs** — the same three layers as full browsable libraries, for general reference or a rest-day routine.
 - **History** — expand any resistance exercise to see your last several sessions and the weight you used per set.
-- **Streak** — a flame badge counting consecutive days with any completed work.
-- **Cross-device, persistent** — all progress is stored in a SQLite database on whichever computer runs the server; any device on the same Wi-Fi network sees the same data.
+- **Streak** — a flame badge counting your consecutive days with any completed work.
 - **Light theme** throughout — no dark mode.
+
+## Using it with family or friends
+
+There's nothing to set up per-person — just send them the live link:
+
+**https://files-tau-eosin.vercel.app**
+
+Each person taps "Create an account," picks a username and password, and gets their own private log from that point on. Nobody can see or affect anyone else's data — it's enforced on the server, not just hidden in the UI.
 
 ## Architecture at a glance
 
 ```
-Browser (phone, laptop, ...)
-   │  HTTP
+Browser (anywhere)
+   │  HTTPS
    ▼
-Express server (server/index.js)  ──serves──▶  built React app (dist/)
-   │  /api/*
+Vercel  ──serves static files──▶  built React app
+   │  /api/* (serverless function, api/index.js → server/app.js)
    ▼
-sql.js (SQLite compiled to WASM)  ──▶  server/data.sqlite   (one file, on this computer)
+Neon Postgres (serverless, via Vercel's Neon integration)
 ```
 
-The workout plan itself (exercise names, sets/reps, videos) is fixed and lives in `src/data/days.js` — it isn't in the database, since there's no in-app plan editor. Only what you actually *do* — completed sets, weights, completed circuits — is stored in `server/data.sqlite`.
+The workout plan itself (exercise names, sets/reps, videos) is fixed and lives in `src/data/days.js` in the code — it isn't in the database, since there's no in-app plan editor. What's in the database: user accounts (username + hashed password) and everything each person actually *does* (completed sets, weights, completed circuits).
 
-## Running it locally
+## Project structure
 
-You need [Node.js](https://nodejs.org) 18+ installed. From the project folder:
+```
+src/           React frontend
+server/        Express app (app.js) shared by both entry points below
+  index.js       local dev / LAN entry point (npm run dev, npm start)
+api/index.js   Vercel serverless entry point (same app.js, wrapped for Vercel)
+vercel.json    tells Vercel how to build the frontend and route /api/*
+```
+
+## How deployment works
+
+- **GitHub → Vercel is automatic.** The GitHub repo is connected to the Vercel project; every push to the `main` branch triggers a new production deployment on its own. You generally don't need to run any deploy command by hand.
+- **Manual deploy** (if you ever need it): `npx vercel --prod` from the project folder, once logged in (`npx vercel login`).
+- **Database**: a Neon Postgres database, added to the Vercel project via Vercel's Storage/Marketplace integration (Neon). Vercel automatically injects the connection details (`DATABASE_URL`, `POSTGRES_URL`, etc.) as environment variables — you don't manage a connection string by hand for production.
+- **Secrets**: `SESSION_SECRET` (used to sign login sessions) is set directly in the Vercel project's Environment Variables — it is not committed to the repo and not auto-generated by any integration, so if you ever recreate the Vercel project from scratch, you need to set it again (any random 64-character string works, e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+
+## Running it locally (for development)
+
+You need [Node.js](https://nodejs.org) 20+, [Docker](https://www.docker.com) (for a local database), and the repo cloned.
 
 ```bash
-npm install        # one-time, installs all dependencies
-npm start           # builds the app and starts the server
+npm install
+
+# one-time: start a local Postgres in Docker
+docker run -d --name wtl-postgres \
+  -e POSTGRES_PASSWORD=devpassword -e POSTGRES_DB=weekly_training_log \
+  -p 5432:5432 postgres:16-alpine
+
+# one-time: create your local .env (see .env.example)
+cp .env.example .env
+# .env.example already points DATABASE_URL at the Docker container above;
+# generate your own SESSION_SECRET value with:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+npm run dev   # hot-reload frontend + API together
 ```
 
-You'll see something like:
+Local development always talks to your own Docker Postgres, never the real production database — that's deliberate, so testing never touches other people's real training data. If you stop and restart the Docker container later, use `docker start wtl-postgres` (no need to `run` again — that would create a second, empty container).
 
-```
-Weekly Training Log server running on port 3001
-  Local:   http://localhost:3001
-  Network: http://10.13.35.55:3001   (use this on other devices)
-```
-
-- Open the **Local** URL on the same computer.
-- Open the **Network** URL on your phone or any other device connected to the **same Wi-Fi network** — that's what makes it cross-device. The IP address shown will vary by network; re-run `npm start` (or check the terminal output) any time you switch networks, since it can change.
-- Leave the terminal window open — closing it stops the server. To stop it deliberately, press `Ctrl+C` in that terminal.
-
-### Developing (hot reload)
-
-If you're editing the code and want instant reload instead of rebuilding:
-
-```bash
-npm run dev
-```
-
-This runs the API (port 3001) and the Vite dev server (port 5173/5174) together; the dev server proxies `/api` calls to the backend automatically. Use `npm start` (not `npm run dev`) for the everyday "just use the app across my devices" case — it's one process, one port, and matches what other devices will see.
-
-### Restarting after a code change (production mode)
-
-`npm start` rebuilds automatically each time you run it, so just stop the server (`Ctrl+C`) and run `npm start` again.
-
-## Where your data lives
-
-Everything you log is stored in a single file: `server/data.sqlite`, on whichever computer is running the server. It is:
-
-- **Not** committed to git (see `.gitignore`) and **not** shared automatically anywhere — back it up yourself (just copy the file) if you want a safety net.
-- Tied to that one computer. If you want your history to follow you without running a server on a specific machine, you'd need to host this somewhere reachable from everywhere (out of scope for this local setup).
-- Safe to delete if you ever want to start over — the server recreates an empty database automatically on next startup.
+`npm start` builds the frontend and runs one Express process serving both the app and the API (same shape as production, useful for a final check before pushing, or for LAN-only use without deploying anywhere).
 
 ## Troubleshooting
 
-- **"Can't reach the server" banner in the app** — the Express server isn't running, or the device can't reach it. Make sure `npm start` is running and that your phone/laptop is on the same Wi-Fi network as the computer running it (not cellular data, not a guest network that isolates devices).
-- **Port 3001 already in use** — another process is using it. Either stop that process, or run the server on a different port: `PORT=4000 npm start` (then use that port in the URLs above).
-- **Other devices can't connect even on the same Wi-Fi** — some routers/network profiles (especially "Guest" networks, or macOS's Firewall) block device-to-device connections. Check System Settings → Network → Firewall on the machine running the server, or try a different network profile.
-- **Lost your history after a reinstall** — check that `server/data.sqlite` wasn't deleted; it's the only copy of your data.
+- **"Can't reach the server" banner** — the API request failed. On the live Vercel app this usually means a transient network hiccup (reload); locally it means the API process (or its Docker Postgres) isn't running.
+- **Forgot your password** — there's no self-service password reset (see "Known limitations"). Whoever manages the Vercel project can reset it directly in the database via Neon's dashboard SQL editor (reachable from the Vercel project's Storage tab).
+- **Local dev can't connect to Postgres** — confirm the container is running: `docker ps` should list `wtl-postgres`. If it's not there, re-run the `docker run` command above (once) or `docker start wtl-postgres` if you'd created it before.
+- **A deploy didn't show up** — check the Vercel dashboard's Deployments tab for the project; a build error there will show exactly what failed. Common cause: a new environment variable your code needs wasn't added in Vercel's Environment Variables settings.
 
 ## Known limitations / not built (by design, for now)
 
-- No user accounts — anyone who can reach the server's URL sees the same single training log. Fine for personal/family LAN use; not meant for multiple independent users.
-- No plan editor — the 7-day plan is fixed in code (from the source PDF). Changing exercises means editing `src/data/days.js`.
-- No rep-count override or per-set notes — only weight is logged per set beyond the checkbox.
-- No progress charts yet — history is a list, not a graph (see "Ideas for later").
+- **No password reset / email verification.** Signing up only needs a username and password, no email — which also means there's no automated way to recover a forgotten password. Low stakes for a small trusted group; a real fix would need an email-based flow.
+- **No plan editor** — the 7-day plan is fixed in code (from the source PDF). Changing exercises means editing `src/data/days.js` and redeploying.
+- **No rep-count override or per-set notes** — only weight is logged per set beyond the checkbox.
+- **No progress charts yet** — history is a list, not a graph (see "Ideas for later").
 - The Prepare & Recover / Warm-up / Mobility / Cool-down content has English + Arabic muscle/drill names, but the short tip bullets under each video are English-only.
 
 ## Ideas for later
 
 - A weight-over-time line chart per exercise (the history data already supports it).
-- Exporting/importing `server/data.sqlite` for backup or moving to a new computer.
+- Self-service password reset via email.
 - Editable rep counts and per-set notes.
