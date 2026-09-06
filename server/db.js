@@ -2,13 +2,17 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set. See .env.example for local dev, or set it in your Vercel project settings.');
+// Vercel's Postgres integration injects POSTGRES_URL (not DATABASE_URL) —
+// accept either so the same code works locally and on Vercel without
+// renaming anything by hand.
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!connectionString) {
+  throw new Error('No database connection string found. Set DATABASE_URL (see .env.example) for local dev, or add the Postgres storage integration in your Vercel project (it sets POSTGRES_URL automatically).');
 }
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+  connectionString,
+  ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
 });
 
 const SCHEMA_SQL = `
