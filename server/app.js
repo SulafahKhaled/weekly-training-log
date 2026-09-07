@@ -186,7 +186,7 @@ function dateRange(req) {
 // rather than one request per day.
 api.get('/stats/logs', async (req, res) => {
   const { start, end } = dateRange(req);
-  const sets = await query('SELECT day_id, block_index, set_index, date, weight FROM set_logs WHERE user_id = $1 AND date BETWEEN $2 AND $3', [req.user.id, start, end]);
+  const sets = await query('SELECT day_id, block_index, set_index, date, weight, hold_seconds FROM set_logs WHERE user_id = $1 AND date BETWEEN $2 AND $3', [req.user.id, start, end]);
   const circuits = await query('SELECT day_id, block_index, date, rounds_completed FROM circuit_logs WHERE user_id = $1 AND date BETWEEN $2 AND $3', [req.user.id, start, end]);
   res.json({ sets, circuits });
 });

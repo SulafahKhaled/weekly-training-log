@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import JournalList from './journal/JournalList';
 import StatsAdherence from './stats/StatsAdherence';
+import StatsExerciseProgress from './stats/StatsExerciseProgress';
 
 const SECTIONS = [
   { id: 'journal', label: 'Journal' },
@@ -41,7 +42,8 @@ export default function JournalStats() {
             ))}
           </div>
           {statsView === 'adherence' && <StatsAdherence />}
-          {statsView !== 'adherence' && <div className="hint">Coming soon.</div>}
+          {statsView === 'exercise' && <StatsExerciseProgress />}
+          {statsView !== 'adherence' && statsView !== 'exercise' && <div className="hint">Coming soon.</div>}
         </>
       )}
     </motion.div>
