@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import JournalList from './journal/JournalList';
 import StatsAdherence from './stats/StatsAdherence';
 import StatsExerciseProgress from './stats/StatsExerciseProgress';
+import StatsBody from './stats/StatsBody';
 
 const SECTIONS = [
   { id: 'journal', label: 'Journal' },
@@ -43,7 +44,8 @@ export default function JournalStats() {
           </div>
           {statsView === 'adherence' && <StatsAdherence />}
           {statsView === 'exercise' && <StatsExerciseProgress />}
-          {statsView !== 'adherence' && statsView !== 'exercise' && <div className="hint">Coming soon.</div>}
+          {statsView === 'body' && <StatsBody />}
+          {statsView === 'nutrition' && <div className="hint">Coming soon.</div>}
         </>
       )}
     </motion.div>
