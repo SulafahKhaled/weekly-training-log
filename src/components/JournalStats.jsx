@@ -4,6 +4,7 @@ import JournalList from './journal/JournalList';
 import StatsAdherence from './stats/StatsAdherence';
 import StatsExerciseProgress from './stats/StatsExerciseProgress';
 import StatsBody from './stats/StatsBody';
+import StatsNutrition from './stats/StatsNutrition';
 
 const SECTIONS = [
   { id: 'journal', label: 'Journal' },
@@ -45,7 +46,7 @@ export default function JournalStats() {
           {statsView === 'adherence' && <StatsAdherence />}
           {statsView === 'exercise' && <StatsExerciseProgress />}
           {statsView === 'body' && <StatsBody />}
-          {statsView === 'nutrition' && <div className="hint">Coming soon.</div>}
+          {statsView === 'nutrition' && <StatsNutrition />}
         </>
       )}
     </motion.div>
