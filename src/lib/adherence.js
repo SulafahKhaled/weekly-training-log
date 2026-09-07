@@ -1,25 +1,9 @@
 import { dayForDate } from '../data/days';
 import { dayProgress } from '../hooks/useProgress';
-
-// Local-calendar-date formatting — NOT d.toISOString().slice(0, 10). toISOString
-// converts to UTC, which silently returns the wrong (often unchanged) date in any
-// positive UTC-offset timezone and previously sent allDatesBetween()'s while loop
-// into an infinite spin (addDays() never actually advanced the date string).
-function isoDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function addDays(dateStr, n) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + n);
-  return isoDate(d);
-}
+import { isoDate, addDays, today as todayLocal } from './dates';
 
 /** Date range for a Week/Month/Year adherence view, anchored on today. */
-export function periodRange(period, today = isoDate(new Date())) {
+export function periodRange(period, today = todayLocal()) {
   if (period === 'week') {
     return { start: addDays(today, -6), end: today, unit: 'day' };
   }

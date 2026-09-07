@@ -1,12 +1,4 @@
-// Local-calendar-date cutoff — see the toISOString() gotcha documented in
-// adherence.js and CLAUDE.md; never format a locally-built Date with
-// .toISOString() for calendar-date comparisons.
-function isoDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+import { addMonths, today } from './dates';
 
 /** One point per date the exercise was logged, for the exercise-progress chart.
  * Resistance -> heaviest set that session; isometric -> average hold_seconds
@@ -40,9 +32,7 @@ export function buildSessions(exercise, logs) {
 export function filterRange(sessions, rangeId) {
   if (rangeId === 'last4') return sessions.slice(-4);
   if (rangeId === '3months') {
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - 3);
-    const cutoffStr = isoDate(cutoff);
+    const cutoffStr = addMonths(today(), -3);
     return sessions.filter((s) => s.date >= cutoffStr);
   }
   return sessions;
