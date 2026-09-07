@@ -143,3 +143,14 @@ export const MOBILITY_INFO = {
   blurb: 'Controlled Articular Rotations (CARs) and joint-focused drills — slow, deliberate, full-range-of-motion work. This is the layer that builds real, martial-artist-like control at end-range, distinct from both warm-up and stretching.',
   videos: Object.values(MOBILITY).map((m) => ({ en: m.en, ar: m.ar, vid: m.vid, tips: m.tips, badge: m.badge })),
 };
+
+// DAYS is ordered Sun..Sat (indices 0-6), matching JS Date#getDay() exactly —
+// so the trained day for any calendar date is derivable, no manual picker needed.
+export function dayForDate(dateStr) {
+  return DAYS[new Date(`${dateStr}T00:00:00`).getDay()];
+}
+
+// Flattened list of every exercise across the week, for pickers (e.g. the
+// Statistics exercise-progress view) that need to search/select one exercise
+// regardless of which day it lives on.
+export const ALL_EXERCISES = DAYS.flatMap((day) => day.blocks.map((block, blockIndex) => ({ dayId: day.id, blockIndex, dayTag: day.tag, color: day.color, ...block })));

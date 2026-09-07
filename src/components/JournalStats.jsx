@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import JournalList from './journal/JournalList';
 
 const SECTIONS = [
   { id: 'journal', label: 'Journal' },
@@ -19,7 +20,7 @@ export default function JournalStats() {
         ))}
       </div>
 
-      {section === 'journal' ? <div className="hint">Journal coming soon.</div> : <div className="hint">Statistics coming soon.</div>}
+      {section === 'journal' ? <JournalList /> : <div className="hint">Statistics coming soon.</div>}
     </motion.div>
   );
 }

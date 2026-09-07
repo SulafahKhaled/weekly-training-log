@@ -1351,3 +1351,223 @@ footer.note {
   border-top: 1px solid var(--line);
   padding-top: 16px;
 }
+
+/* ===== Journal ===== */
+.journal-new-btn {
+  width: 100%;
+  border: 1.5px dashed var(--line);
+  background: none;
+  border-radius: var(--radius);
+  padding: 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--upper);
+  cursor: pointer;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.journal-empty {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 28px 0;
+}
+.journal-entry-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.journal-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.journal-entry-date {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+.journal-day-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.journal-entry-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.journal-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  border-radius: 8px;
+}
+.journal-icon-btn:hover {
+  background: var(--bg-raised);
+}
+.journal-entry-text {
+  font-size: 13.5px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.journal-photos {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.journal-photo-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+.journal-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.journal-photo-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(10, 11, 15, 0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+.journal-add-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--upper);
+  margin-top: 12px;
+  cursor: pointer;
+}
+.journal-add-photo input {
+  display: none;
+}
+
+.journal-form {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.journal-form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.journal-form-row label {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+.journal-form-row input[type='date'] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--bg-raised);
+  color: var(--text);
+}
+.journal-textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+  background: var(--bg-raised);
+  color: var(--text);
+}
+.journal-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.journal-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.journal-btn-primary {
+  background: var(--upper);
+  color: var(--on-accent);
+}
+.journal-btn-ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(10, 11, 15, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+}
+.lightbox-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 14px);
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

@@ -85,16 +85,23 @@ export function fetchStreak() {
   return request('/streak');
 }
 
+function qs(params) {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
 /* ---------- stats ---------- */
 
 export function fetchStatsLogs(start, end) {
-  return request(`/stats/logs?start=${start}&end=${end}`);
+  return request(`/stats/logs${qs({ start, end })}`);
 }
 
 /* ---------- journal ---------- */
 
 export function fetchJournal(start, end) {
-  return request(`/journal?start=${start}&end=${end}`);
+  return request(`/journal${qs({ start, end })}`);
 }
 
 export function saveJournalEntry({ date, dayId, text }) {
@@ -118,7 +125,7 @@ export const journalPhotoUrl = (id) => `${BASE}/journal/photos/${id}`;
 /* ---------- body composition & measurements ---------- */
 
 export function fetchBodyLogs(start, end) {
-  return request(`/body-logs?start=${start}&end=${end}`);
+  return request(`/body-logs${qs({ start, end })}`);
 }
 
 export function saveBodyLog(entry) {
@@ -126,8 +133,7 @@ export function saveBodyLog(entry) {
 }
 
 export function fetchBodyMeasurements(start, end, type) {
-  const q = type ? `&type=${type}` : '';
-  return request(`/body-measurements?start=${start}&end=${end}${q}`);
+  return request(`/body-measurements${qs({ start, end, type })}`);
 }
 
 export function saveBodyMeasurement({ date, measurementType, value, unit }) {
@@ -137,7 +143,7 @@ export function saveBodyMeasurement({ date, measurementType, value, unit }) {
 /* ---------- nutrition ---------- */
 
 export function fetchNutritionLogs(start, end) {
-  return request(`/nutrition-logs?start=${start}&end=${end}`);
+  return request(`/nutrition-logs${qs({ start, end })}`);
 }
 
 export function saveNutritionLog(entry) {
