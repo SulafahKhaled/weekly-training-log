@@ -7,10 +7,12 @@ import Home from './components/Home';
 import DayView from './components/DayView';
 import InfoPage from './components/InfoPage';
 import LoginScreen from './components/LoginScreen';
+import JournalStats from './components/JournalStats';
 import { DAYS, WARMUP_INFO, COOLDOWN_INFO, MOBILITY_INFO } from './data/days';
 import { useTodayTotals } from './hooks/useProgress';
 import { ProgressProvider, useProgressContext } from './context/ProgressContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { UiPrefsProvider } from './context/UiPrefsContext';
 
 const INFO_PAGES = { warmup: WARMUP_INFO, mobility: MOBILITY_INFO, cooldown: COOLDOWN_INFO };
 
@@ -37,7 +39,9 @@ function Gate() {
 
   return (
     <ProgressProvider>
-      <AppShell />
+      <UiPrefsProvider>
+        <AppShell />
+      </UiPrefsProvider>
     </ProgressProvider>
   );
 }
@@ -69,6 +73,10 @@ function AppShell() {
     title = info.title;
     subtitle = info.ar;
     content = <InfoPage key={route.view} info={info} />;
+  } else if (route.view === 'journalstats') {
+    title = 'Journal & Stats';
+    subtitle = 'Look back and see your progress';
+    content = <JournalStats key="journalstats" />;
   }
 
   return (

@@ -42,10 +42,10 @@ export function fetchProgress(date) {
   return request(`/progress?date=${date}`);
 }
 
-export function toggleSet({ dayId, blockIndex, setIndex, date, done, weight }) {
+export function toggleSet({ dayId, blockIndex, setIndex, date, done, weight, holdSeconds }) {
   return request('/sets', {
     method: 'POST',
-    body: JSON.stringify({ day_id: dayId, block_index: blockIndex, set_index: setIndex, date, done, weight }),
+    body: JSON.stringify({ day_id: dayId, block_index: blockIndex, set_index: setIndex, date, done, weight, hold_seconds: holdSeconds }),
   });
 }
 
@@ -53,6 +53,13 @@ export function updateSetWeight({ dayId, blockIndex, setIndex, date, weight }) {
   return request('/sets/weight', {
     method: 'PATCH',
     body: JSON.stringify({ day_id: dayId, block_index: blockIndex, set_index: setIndex, date, weight }),
+  });
+}
+
+export function updateSetHold({ dayId, blockIndex, setIndex, date, holdSeconds }) {
+  return request('/sets/hold', {
+    method: 'PATCH',
+    body: JSON.stringify({ day_id: dayId, block_index: blockIndex, set_index: setIndex, date, hold_seconds: holdSeconds }),
   });
 }
 
@@ -76,4 +83,81 @@ export function fetchHistory(dayId, blockIndex, limit = 20) {
 
 export function fetchStreak() {
   return request('/streak');
+}
+
+/* ---------- stats ---------- */
+
+export function fetchStatsLogs(start, end) {
+  return request(`/stats/logs?start=${start}&end=${end}`);
+}
+
+/* ---------- journal ---------- */
+
+export function fetchJournal(start, end) {
+  return request(`/journal?start=${start}&end=${end}`);
+}
+
+export function saveJournalEntry({ date, dayId, text }) {
+  return request('/journal', { method: 'POST', body: JSON.stringify({ date, day_id: dayId, text }) });
+}
+
+export function deleteJournalEntry(id) {
+  return request(`/journal/${id}`, { method: 'DELETE' });
+}
+
+export function uploadJournalPhoto(entryId, { mime, data }) {
+  return request(`/journal/${entryId}/photos`, { method: 'POST', body: JSON.stringify({ mime, data }) });
+}
+
+export function deleteJournalPhoto(id) {
+  return request(`/journal/photos/${id}`, { method: 'DELETE' });
+}
+
+export const journalPhotoUrl = (id) => `${BASE}/journal/photos/${id}`;
+
+/* ---------- body composition & measurements ---------- */
+
+export function fetchBodyLogs(start, end) {
+  return request(`/body-logs?start=${start}&end=${end}`);
+}
+
+export function saveBodyLog(entry) {
+  return request('/body-logs', { method: 'POST', body: JSON.stringify(entry) });
+}
+
+export function fetchBodyMeasurements(start, end, type) {
+  const q = type ? `&type=${type}` : '';
+  return request(`/body-measurements?start=${start}&end=${end}${q}`);
+}
+
+export function saveBodyMeasurement({ date, measurementType, value, unit }) {
+  return request('/body-measurements', { method: 'POST', body: JSON.stringify({ date, measurement_type: measurementType, value, unit }) });
+}
+
+/* ---------- nutrition ---------- */
+
+export function fetchNutritionLogs(start, end) {
+  return request(`/nutrition-logs?start=${start}&end=${end}`);
+}
+
+export function saveNutritionLog(entry) {
+  return request('/nutrition-logs', { method: 'POST', body: JSON.stringify(entry) });
+}
+
+export function fetchNutritionGoals() {
+  return request('/nutrition-goals');
+}
+
+export function saveNutritionGoal(goal) {
+  return request('/nutrition-goals', { method: 'POST', body: JSON.stringify(goal) });
+}
+
+/* ---------- per-user UI preferences ---------- */
+
+export function fetchUiPrefs() {
+  return request('/ui-prefs');
+}
+
+export function saveUiPrefs(collapsedSections) {
+  return request('/ui-prefs', { method: 'PUT', body: JSON.stringify({ collapsed_sections: collapsedSections }) });
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Check } from 'lucide-react';
 import ExerciseShell from '../ExerciseShell';
 import VideoBlock from '../VideoBlock';
 import ProgressRing from '../ProgressRing';
@@ -17,7 +17,7 @@ function initialState(block) {
 }
 
 export default function IsometricBlock({ day, block, bi }) {
-  const { isSetDone, toggleSet } = useProgressContext();
+  const { isSetDone, toggleSet, getSetHoldSeconds, setHoldSecondsFor } = useProgressContext();
   const [color, track] = COLOR[day.color] || COLOR.upper;
   const wash = WASH[day.color] || WASH.upper;
   const [state, setState] = useState(() => initialState(block));
@@ -35,7 +35,7 @@ export default function IsometricBlock({ day, block, bi }) {
 
         if (s.phase === 'hold') {
           beepEnd();
-          if (!isSetDone(day.id, bi, s.holdIdx)) toggleSet(day.id, bi, s.holdIdx, null);
+          if (!isSetDone(day.id, bi, s.holdIdx)) toggleSet(day.id, bi, s.holdIdx, null, block.hold);
           const nextIdx = s.holdIdx + 1;
           if (nextIdx >= block.sets) {
             beepDone();
@@ -142,7 +142,34 @@ export default function IsometricBlock({ day, block, bi }) {
           </button>
         </div>
       </div>
-      <div className="hint">Runs through all {block.sets} holds automatically with rest between. Sets are marked complete as you go.</div>
+      <div className="hint">Runs through all {block.sets} holds automatically with rest between. Sets are marked complete as you go — logged at the planned {block.hold}s by default, editable below if you held more or less.</div>
+
+      {Array.from({ length: block.sets }).map((_, s) => {
+        const isDone = isSetDone(day.id, bi, s);
+        const heldValue = isDone ? (getSetHoldSeconds(day.id, bi, s) ?? block.hold) : '';
+        return (
+          <div className="set-row" key={s}>
+            <span className={`setbox ${isDone ? 'done' : ''}`} style={{ cursor: 'default' }}>
+              {isDone ? <Check size={13} strokeWidth={3} /> : s + 1}
+            </span>
+            <div className="setlabel">
+              Hold {s + 1} — {block.hold}s planned
+            </div>
+            <input
+              className="weight-input"
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min="0"
+              placeholder="—"
+              disabled={!isDone}
+              value={heldValue}
+              onChange={(e) => setHoldSecondsFor(day.id, bi, s, e.target.value === '' ? null : Number(e.target.value))}
+            />
+            <span className="weight-unit wide">sec</span>
+          </div>
+        );
+      })}
     </ExerciseShell>
   );
 }

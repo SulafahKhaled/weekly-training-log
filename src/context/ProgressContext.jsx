@@ -3,6 +3,7 @@ import {
   fetchProgress,
   toggleSet as apiToggleSet,
   updateSetWeight as apiUpdateSetWeight,
+  updateSetHold as apiUpdateSetHold,
   toggleCircuit as apiToggleCircuit,
   resetDay as apiResetDay,
   fetchStreak,
@@ -32,7 +33,7 @@ export function ProgressProvider({ children }) {
     try {
       const [progress] = await Promise.all([fetchProgress(date), refreshStreak()]);
       const setsMap = new Map();
-      progress.sets.forEach((s) => setsMap.set(setKey(s.day_id, s.block_index, s.set_index), s.weight));
+      progress.sets.forEach((s) => setsMap.set(setKey(s.day_id, s.block_index, s.set_index), { weight: s.weight, holdSeconds: s.hold_seconds }));
       const circuitsMap = new Map();
       progress.circuits.forEach((c) => circuitsMap.set(circuitKey(c.day_id, c.block_index), c.rounds_completed));
       setSets(setsMap);
@@ -49,16 +50,16 @@ export function ProgressProvider({ children }) {
     loadAll();
   }, [loadAll]);
 
-  async function toggleSet(dayId, blockIndex, setIndex, weight = null) {
+  async function toggleSet(dayId, blockIndex, setIndex, weight = null, holdSeconds = null) {
     const key = setKey(dayId, blockIndex, setIndex);
     const wasDone = sets.has(key);
     const prev = sets;
     const next = new Map(sets);
     if (wasDone) next.delete(key);
-    else next.set(key, weight);
+    else next.set(key, { weight, holdSeconds });
     setSets(next);
     try {
-      await apiToggleSet({ dayId, blockIndex, setIndex, date, done: !wasDone, weight });
+      await apiToggleSet({ dayId, blockIndex, setIndex, date, done: !wasDone, weight, holdSeconds });
       refreshStreak();
     } catch (e) {
       setSets(prev);
@@ -69,9 +70,20 @@ export function ProgressProvider({ children }) {
   async function setWeightFor(dayId, blockIndex, setIndex, weight) {
     const key = setKey(dayId, blockIndex, setIndex);
     if (!sets.has(key)) return;
-    setSets((s) => new Map(s).set(key, weight));
+    setSets((s) => new Map(s).set(key, { ...s.get(key), weight }));
     try {
       await apiUpdateSetWeight({ dayId, blockIndex, setIndex, date, weight });
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function setHoldSecondsFor(dayId, blockIndex, setIndex, holdSeconds) {
+    const key = setKey(dayId, blockIndex, setIndex);
+    if (!sets.has(key)) return;
+    setSets((s) => new Map(s).set(key, { ...s.get(key), holdSeconds }));
+    try {
+      await apiUpdateSetHold({ dayId, blockIndex, setIndex, date, holdSeconds });
     } catch (e) {
       setError(e.message);
     }
@@ -115,10 +127,12 @@ export function ProgressProvider({ children }) {
     error,
     streak,
     isSetDone: (dayId, bi, si) => sets.has(setKey(dayId, bi, si)),
-    getSetWeight: (dayId, bi, si) => sets.get(setKey(dayId, bi, si)) ?? null,
+    getSetWeight: (dayId, bi, si) => sets.get(setKey(dayId, bi, si))?.weight ?? null,
+    getSetHoldSeconds: (dayId, bi, si) => sets.get(setKey(dayId, bi, si))?.holdSeconds ?? null,
     isCircuitDone: (dayId, bi) => circuits.has(circuitKey(dayId, bi)),
     toggleSet,
     setWeightFor,
+    setHoldSecondsFor,
     toggleCircuit,
     resetDay,
   };

@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Home, Flame, PersonStanding, Snowflake } from 'lucide-react';
+import { Home, Flame, PersonStanding, Snowflake, NotebookPen } from 'lucide-react';
 
 const TABS = [
   { id: 'home', label: 'Home', Icon: Home },
   { id: 'warmup', label: 'Warm-up', Icon: Flame },
   { id: 'mobility', label: 'Mobility', Icon: PersonStanding },
   { id: 'cooldown', label: 'Cool-down', Icon: Snowflake },
+  { id: 'journalstats', label: 'Journal', Icon: NotebookPen },
 ];
 
 export default function TabBar({ active, onSelect }) {
