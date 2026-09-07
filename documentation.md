@@ -17,6 +17,13 @@ A 7-day home-workout tracker (Sun–Sat: Upper A, Lower A, HIIT, Core+Hip, Upper
 - **Warm-up / Mobility / Cool-down tabs** — the same three layers as full browsable libraries, for general reference or a rest-day routine.
 - **History** — expand any resistance exercise to see your last several sessions and the weight you used per set.
 - **Streak** — a flame badge counting your consecutive days with any completed work.
+- **Dramatic fullscreen timers** — rest, isometric hold, and HIIT circuit timers all take over the screen while running, with a huge countdown ring, the exercise name, and a tick + haptic buzz on the final 3 seconds. Every timer supports pause, resume, stop, reset, and repeat.
+- **Journal & Stats tab** — a dated, free-text training journal (optionally with photos) plus four statistics views:
+  - **Adherence** — a GitHub-style heatmap and completion ring over Week/Month/Year, plus a per-day-type breakdown ("Upper A completed 3/4 times").
+  - **Exercise progress** — pick any exercise and see a line chart of its history: weight for resistance moves, actual hold duration for isometric holds (editable per set, see below), rounds completed for HIIT circuits.
+  - **Body composition & measurements** — log weight/muscle mass/fat mass/body-fat % and neck/waist/hips/arms/thighs, each with its own trend chart and a "change since first log / last 30 days" signal.
+  - **Nutrition** — log daily macros, set goals for calories/protein/fiber, see today's progress as goal-rings (à la Apple Fitness), and trend charts with the goal line overlaid.
+- **Isometric holds log a real duration** — each hold defaults to the planned time the moment it completes, but is editable afterward (e.g. "held 35s not the full 40s") so the exercise-progress chart reflects what actually happened, not just the timer's plan.
 - **Light theme** throughout — no dark mode.
 
 ## Using it with family or friends
@@ -95,11 +102,12 @@ Local development always talks to your own Docker Postgres, never the real produ
 - **No password reset / email verification.** Signing up only needs a username and password, no email — which also means there's no automated way to recover a forgotten password. Low stakes for a small trusted group; a real fix would need an email-based flow.
 - **No plan editor** — the 7-day plan is fixed in code (from the source PDF). Changing exercises means editing `src/data/days.js` and redeploying.
 - **No rep-count override or per-set notes** — only weight is logged per set beyond the checkbox.
-- **No progress charts yet** — history is a list, not a graph (see "Ideas for later").
+- **Nutrition adherence is logging + goals + trend charts only** — there's no separate "days logged vs. not logged" or per-goal hit-rate breakdown view yet (the Adherence tab's day-type breakdown covers that concept for workouts, not nutrition).
+- Journal photos are stored as compressed JPEGs directly in the database (resized client-side before upload) — fine for personal use, but would need moving to dedicated file storage if photo volume ever got heavy.
 - The Prepare & Recover / Warm-up / Mobility / Cool-down content has English + Arabic muscle/drill names, but the short tip bullets under each video are English-only.
 
 ## Ideas for later
 
-- A weight-over-time line chart per exercise (the history data already supports it).
 - Self-service password reset via email.
 - Editable rep counts and per-set notes.
+- A days-logged-vs-not-logged nutrition adherence view, mirroring the workout Adherence tab.
