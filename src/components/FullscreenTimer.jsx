@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Pause, Play, SkipForward, PartyPopper } from 'lucide-react';
+import { ChevronDown, Pause, Play, SkipForward, PartyPopper, RotateCcw, Square } from 'lucide-react';
 import ProgressRing from './ProgressRing';
 import { fmtTime } from '../lib/time';
 import { beepTick, vibrate } from '../lib/audio';
@@ -26,6 +26,9 @@ export default function FullscreenTimer({
   onTogglePause,
   onSkip,
   skipLabel = 'Skip',
+  onReset,
+  onStop,
+  onRepeat,
   onMinimize,
   complete = false,
   completeTitle = 'Done! 🎉',
@@ -61,11 +64,19 @@ export default function FullscreenTimer({
             </div>
             <div className="fs-complete-title">{completeTitle}</div>
             {completeSub && <div className="fs-complete-sub">{completeSub}</div>}
-            {onDismissComplete && (
-              <button className="fs-done-btn" style={{ background: color }} onClick={onDismissComplete}>
-                Continue
-              </button>
-            )}
+            <div className="fs-controls">
+              {onRepeat && (
+                <button className="fs-btn fs-btn-ghost" onClick={onRepeat}>
+                  <RotateCcw size={16} />
+                  Repeat
+                </button>
+              )}
+              {onDismissComplete && (
+                <button className="fs-btn fs-btn-solid" style={{ background: color }} onClick={onDismissComplete}>
+                  Continue
+                </button>
+              )}
+            </div>
           </motion.div>
         ) : (
           <motion.div key="running" className="fs-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -102,6 +113,18 @@ export default function FullscreenTimer({
             {next && <div className="fs-next">{next}</div>}
 
             <div className="fs-controls">
+              {onReset && (
+                <button className="fs-btn fs-btn-ghost" onClick={onReset}>
+                  <RotateCcw size={16} />
+                  Reset
+                </button>
+              )}
+              {onStop && (
+                <button className="fs-btn fs-btn-ghost" onClick={onStop}>
+                  <Square size={16} />
+                  Stop
+                </button>
+              )}
               {onSkip && (
                 <button className="fs-btn fs-btn-ghost" onClick={onSkip}>
                   <SkipForward size={16} />

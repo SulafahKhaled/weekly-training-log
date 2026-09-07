@@ -88,6 +88,13 @@ export default function CircuitBlock({ day, block, bi }) {
     setState((s) => advance(s, block, handleComplete));
   }
 
+  /** Restart the whole circuit from round 1 / move 1 without leaving fullscreen —
+   * used both by the in-progress "Reset" button and the complete screen's "Repeat". */
+  function handleRestart() {
+    setState({ ...initialState(block), running: true, started: true });
+    beepStart();
+  }
+
   const currentItem = block.items[state.exIdx];
   const nextItem = block.items[(state.exIdx + 1) % block.items.length];
   const isWork = state.phase === 'work';
@@ -125,6 +132,9 @@ export default function CircuitBlock({ day, block, bi }) {
           onTogglePause={handleStart}
           onSkip={handleSkip}
           skipLabel={isWork ? 'Skip move' : 'Skip rest'}
+          onReset={handleRestart}
+          onStop={handleReset}
+          onRepeat={handleRestart}
           onMinimize={() => setMinimized(true)}
           complete={state.complete}
           completeTitle="Circuit complete! 🎉"

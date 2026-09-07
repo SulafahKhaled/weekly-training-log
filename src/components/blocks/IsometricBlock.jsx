@@ -72,6 +72,13 @@ export default function IsometricBlock({ day, block, bi }) {
     setMinimized(false);
   }
 
+  /** Restart the whole hold sequence from the top without leaving fullscreen —
+   * used both by the in-progress "Reset" button and the complete screen's "Repeat". */
+  function handleRestart() {
+    setState({ ...initialState(block), running: true, started: true });
+    beepStart();
+  }
+
   const phaseLabel = state.running ? (state.phase === 'hold' ? 'Hold!' : 'Rest') : state.started ? 'Paused' : 'Ready';
   const progText = `Hold ${Math.min(state.holdIdx + 1, block.sets)} of ${block.sets}`;
   const ringTotal = state.phase === 'hold' ? block.hold : block.rest;
@@ -94,6 +101,9 @@ export default function IsometricBlock({ day, block, bi }) {
           meta={progText}
           paused={!state.running && !state.complete}
           onTogglePause={handleStart}
+          onReset={handleRestart}
+          onStop={handleReset}
+          onRepeat={handleRestart}
           onMinimize={() => setMinimized(true)}
           complete={state.complete}
           completeTitle="Done! 🎉"
