@@ -4,12 +4,14 @@ import { Copy, KeyRound, Trash2 } from 'lucide-react';
 import { fetchMcpToken, createMcpToken, revokeMcpToken } from '../../lib/api';
 
 const TOOLS = [
-  ['log_meal', 'Log a meal (estimates are marked)'],
-  ['log_workout', 'Log exercises, sets, reps, weight, seconds, status'],
-  ['log_measurement', 'Weight, body composition, tape measurements'],
-  ['log_journal_entry', 'Add a journal note'],
-  ['get_today · get_plan · list_exercises · get_stats', 'Read-only, so Claude can check before it writes'],
-  ['update_entry · delete_entry', 'Fix a mistake by id'],
+  ['log_meal · log_daily_nutrition · set_nutrition_goal', 'Meals, daily totals, calorie / protein / fiber goals'],
+  ['log_workout · quick_add_exercise · add_session_to_day', 'Sets, reps, weight, seconds, status; extra exercises or another day\'s session'],
+  ['log_measurement · log_journal_entry · log_progress_test', 'Body weight & composition, tape sizes, journal notes, flexibility tests'],
+  ['create_plan · edit_plan · set_active_plan · delete_plan', 'Build and switch plans: sessions, exercises, timing, move / swap days'],
+  ['create_exercise · update_exercise · archive / duplicate / delete', 'Edit the exercise library, including media links'],
+  ['get_settings · update_settings', 'Timing defaults, week start, timezone, stick level'],
+  ['get_today · get_plan_details · list_plans · list_exercises · get_stats · get_history', 'Read-only, so Claude can check before it writes'],
+  ['update_entry · delete_entry', 'Fix or remove anything by id'],
 ];
 
 export default function ConnectClaude() {
@@ -127,7 +129,7 @@ export default function ConnectClaude() {
           <div className="grow"><code>{name}</code><div className="mini">{text}</div></div>
         </div>
       ))}
-      <div className="hint">Everything Claude writes is tagged “Claude”, counted in your statistics like anything else, and can be edited or deleted here or by asking Claude.</div>
+      <div className="hint">Everything the app can do except journal photos is available by chat. Everything Claude writes is tagged “Claude”, counted in your statistics like anything else, and can be edited or deleted here or by asking Claude.</div>
     </motion.div>
   );
 }

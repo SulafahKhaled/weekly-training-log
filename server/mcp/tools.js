@@ -35,6 +35,7 @@ function assertDate(d) {
 }
 
 export function createTools(db, userId, { now = () => new Date() } = {}) {
+  let extraDelete = null;
   /* ---------- context ---------- */
   async function loadSettings() {
     const rows = await db.query('SELECT data FROM user_settings WHERE user_id = $1', [userId]);
@@ -349,6 +350,7 @@ export function createTools(db, userId, { now = () => new Date() } = {}) {
       const [date, type] = rest.split(':');
       rows = await db.query('DELETE FROM body_measurements WHERE user_id = $1 AND date = $2 AND measurement_type = $3 RETURNING date', [userId, date, type]);
     } else if (kind === 'journal') rows = await db.query('DELETE FROM journal_entries WHERE user_id = $1 AND date = $2 RETURNING date', [userId, rest]);
+    else if (extraDelete) rows = (await extraDelete(id)) || (() => { throw new ToolError(`Unknown entry type "${kind}".`); })();
     else throw new ToolError(`Unknown entry type "${kind}".`);
     if (!rows.length) throw new ToolError(`Nothing found with id ${id}.`);
     return { deleted: id };
@@ -455,5 +457,9 @@ export function createTools(db, userId, { now = () => new Date() } = {}) {
     };
   }
 
-  return { log_meal, log_workout, log_measurement, log_journal_entry, update_entry, delete_entry, get_today, get_plan, list_exercises, get_stats, _weekday: weekdayOf, _addDays: addDays };
+  const setExtraDelete = (fn) => {
+    extraDelete = fn;
+  };
+  const ctx = { setExtraDelete, loadSettings, loadPlans, loadLibrary, idempotent, today, matchExercise, norm, assertDate, BUILTIN };
+  return { _ctx: ctx, log_meal, log_workout, log_measurement, log_journal_entry, update_entry, delete_entry, get_today, get_plan, list_exercises, get_stats, _weekday: weekdayOf, _addDays: addDays };
 }

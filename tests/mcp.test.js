@@ -83,10 +83,15 @@ describe('authentication', () => {
 });
 
 describe('tools', () => {
-  it('lists the ten tools with schemas', async () => {
+  it('lists every tool with a description and schema', async () => {
     const c = await connect(token, { path: false, header: true });
     const { tools } = await c.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['delete_entry', 'get_plan', 'get_stats', 'get_today', 'list_exercises', 'log_journal_entry', 'log_measurement', 'log_meal', 'log_workout', 'update_entry'].sort());
+    const names = tools.map((t) => t.name);
+    for (const n of ['log_meal', 'log_workout', 'log_measurement', 'log_journal_entry', 'update_entry', 'delete_entry', 'get_today', 'get_plan', 'list_exercises', 'get_stats',
+      'list_plans', 'create_plan', 'edit_plan', 'set_active_plan', 'delete_plan', 'create_exercise', 'update_exercise', 'archive_exercise', 'duplicate_exercise', 'delete_exercise',
+      'get_settings', 'update_settings', 'set_nutrition_goal', 'log_daily_nutrition', 'log_progress_test', 'add_session_to_day', 'quick_add_exercise', 'remove_from_day', 'get_history']) {
+      expect(names, n).toContain(n);
+    }
     expect(tools.every((t) => t.description && t.inputSchema?.type === 'object')).toBe(true);
     await c.close();
   });
@@ -229,6 +234,159 @@ describe('tools', () => {
     expect(p.json.days.sun.map((s) => s.name)).toContain('Upper A');
     const l = await call(c, 'list_exercises', { query: 'bench', limit: 5 });
     expect(l.json.exercises.map((e) => e.id)).toContain('bench_press');
+    await c.close();
+  });
+});
+
+async function withPlan() {
+  const plan = buildDefaultPlan();
+  await db.query('INSERT INTO plans (user_id, plan_id, data, sort_order) VALUES ($1,$2,$3,0)', [userId, plan.id, JSON.stringify(plan)]);
+}
+
+describe('plans', () => {
+  it('create (copy) → edit → activate, leaving the original untouched', async () => {
+    await withPlan();
+    const c = await connect();
+    const created = await call(c, 'create_plan', { name: 'Heavy', copy_from: 'Weekly plan', make_active: true });
+    expect(created.json.saved).toMatchObject({ name: 'Heavy', copied_from: 'Weekly plan', active: true });
+    const edit = await call(c, 'edit_plan', {
+      plan: 'Heavy',
+      operations: [
+        { op: 'override_exercise', day: 'sunday', session: 'Upper A', exercise: 'bench press', sets: 5, rest: 90 },
+        { op: 'add_exercise', day: 'sun', session: 'Upper A', exercise: 'push-up', sets: 2 },
+        { op: 'add_session', day: 'fri', name: 'Arms', optional: true },
+        { op: 'move_session', day: 'fri', session: 'Arms', to_day: 'sat' },
+        { op: 'set_timing', rest: 20 },
+      ],
+    });
+    expect(edit.text).not.toMatch(/not changed/);
+    expect(edit.isError).toBe(false);
+    const heavy = (await db.query(`SELECT data FROM plans WHERE user_id = $1 AND data->>'name' = 'Heavy'`, [userId]))[0].data;
+    const upper = heavy.days.sun.find((s) => s.id === 'main');
+    expect(upper.entries[0].overrides).toMatchObject({ sets: 5, rest: 90 });
+    expect(upper.entries.at(-1)).toMatchObject({ exerciseId: 'pushup', overrides: { sets: 2 } });
+    expect(heavy.days.sat.map((s) => s.name.en)).toContain('Arms');
+    expect(heavy.timing.rest).toBe(20);
+    const orig = (await db.query(`SELECT data FROM plans WHERE user_id = $1 AND plan_id = 'default'`, [userId]))[0].data;
+    expect(orig.days.sun.find((s) => s.id === 'main').entries).toHaveLength(6);
+    const settings = (await db.query('SELECT data FROM user_settings WHERE user_id = $1', [userId]))[0].data;
+    expect(settings.activePlanId).toBe(created.json.saved.id);
+    // get_today / get_plan now follow the active plan
+    expect((await call(c, 'get_plan', {})).json.plan).toBe('Heavy');
+    await c.close();
+  });
+
+  it('edit_plan is all-or-nothing', async () => {
+    await withPlan();
+    const c = await connect();
+    const r = await call(c, 'edit_plan', { operations: [{ op: 'rename_plan', name: 'Changed' }, { op: 'remove_exercise', day: 'sun', session: 'Upper A', exercise: 'no such exercise' }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toMatch(/Plan not changed/);
+    expect((await db.query(`SELECT data->>'name' AS n FROM plans WHERE user_id = $1`, [userId]))[0].n).toBe('Weekly plan');
+    await c.close();
+  });
+
+  it('swaps days and refuses to delete the original plan', async () => {
+    await withPlan();
+    const c = await connect();
+    await call(c, 'edit_plan', { operations: [{ op: 'swap_days', day_a: 'sun', day_b: 'mon' }] });
+    const p = (await db.query(`SELECT data FROM plans WHERE user_id = $1`, [userId]))[0].data;
+    expect(p.days.sun.some((s) => s.name.en === 'Lower A')).toBe(true);
+    expect((await call(c, 'delete_plan', { plan: 'default' })).isError).toBe(true);
+    await c.close();
+  });
+});
+
+describe('exercise library', () => {
+  it('create → update (incl. media) → archive → duplicate → delete', async () => {
+    const c = await connect();
+    const made = (await call(c, 'create_exercise', { name_en: 'Copenhagen plank', type: 'hold_side', sets: 2, seconds: 20, primary_muscles: ['adductors'] })).json.saved;
+    expect(made).toMatchObject({ type: 'hold_side', sets: 2, seconds: 20, custom: true });
+    const up = await call(c, 'update_exercise', { exercise: 'Copenhagen plank', fields: { seconds: 25, media: { url: 'https://www.youtube.com/watch?v=abc', source: 'Me' } } });
+    expect(up.json.saved).toMatchObject({ seconds: 25, media: 'https://www.youtube.com/watch?v=abc' });
+    expect((await call(c, 'update_exercise', { exercise: 'Copenhagen plank', fields: { primary_muscles: ['notAMuscle'] } })).isError).toBe(true);
+    // editing a BUILT-IN stores an override and leaves the index alone
+    await call(c, 'update_exercise', { exercise: 'plank', fields: { seconds: 60 } });
+    expect((await call(c, 'list_exercises', { query: 'plank' })).json.exercises.find((e) => e.id === 'plank').seconds).toBe(60);
+    await call(c, 'delete_exercise', { exercise: 'plank' });
+    expect((await call(c, 'list_exercises', { query: 'plank' })).json.exercises.find((e) => e.id === 'plank').seconds).toBe(40);
+    await call(c, 'archive_exercise', { exercise: 'Copenhagen plank' });
+    expect((await call(c, 'list_exercises', { query: 'copenhagen' })).json.exercises).toHaveLength(0);
+    await call(c, 'archive_exercise', { exercise: made.id, archived: false });
+    const dup = (await call(c, 'duplicate_exercise', { exercise: made.id, new_name: 'Copenhagen plank B' })).json.saved;
+    expect(dup.name).toBe('Copenhagen plank B');
+    await call(c, 'delete_exercise', { exercise: dup.id });
+    expect((await db.query(`SELECT count(*)::int AS n FROM user_exercises WHERE user_id = $1 AND exercise_id = $2`, [userId, dup.id]))[0].n).toBe(0);
+    await c.close();
+  });
+});
+
+describe('settings, goals, daily totals, tests, extras, history', () => {
+  it('settings round-trip and validation', async () => {
+    const c = await connect();
+    expect((await call(c, 'update_settings', { rest_s: 45, week_start: 6, stick_level: 2 })).json.saved).toMatchObject({ rest_s: 45, week_start: 6, stick_level: 2, timezone: 'Asia/Riyadh' });
+    expect((await call(c, 'update_settings', { timezone: 'Mars/Olympus' })).isError).toBe(true);
+    await c.close();
+  });
+
+  it('nutrition goals are append-only; daily totals merge; both deletable by id', async () => {
+    const c = await connect();
+    const g1 = (await call(c, 'set_nutrition_goal', { effective_from: '2025-01-01', calories_goal: 2200, protein_goal: 130 })).json.saved;
+    await call(c, 'set_nutrition_goal', { effective_from: '2025-02-01', calories_goal: 2000 });
+    expect((await db.query('SELECT count(*)::int AS n FROM nutrition_goals WHERE user_id = $1', [userId]))[0].n).toBe(2);
+    await call(c, 'log_daily_nutrition', { date: '2025-01-10', calories: 1800, protein_g: 120 });
+    await call(c, 'log_daily_nutrition', { date: '2025-01-10', fiber_g: 25 });
+    const day = (await call(c, 'get_history', { kind: 'nutrition' })).json;
+    expect(day.daily_totals[0]).toMatchObject({ date: '2025-01-10', calories: 1800, protein_g: 120, fiber_g: 25 });
+    expect(day.goals).toHaveLength(2);
+    expect((await call(c, 'delete_entry', { id: g1.id })).json.deleted).toBe(g1.id);
+    expect((await call(c, 'delete_entry', { id: 'nutrition:2025-01-10' })).json.deleted).toBe('nutrition:2025-01-10');
+    await c.close();
+  });
+
+  it('progress tests: validated, merged across calls', async () => {
+    const c = await connect();
+    await call(c, 'log_progress_test', { checkpoint: 'start', tested_on: '2025-01-05', results: { reach: { value: 12 }, knee_wall: { right: 8, left: 7 } } });
+    const r = await call(c, 'log_progress_test', { checkpoint: 'start', results: { ninety_no_hands: { ok: false, clean: 2 } } });
+    expect(r.json.saved.results).toMatchObject({ reach: { value: 12 }, knee_wall: { right: 8, left: 7 }, ninety_no_hands: { ok: false, clean: 2 } });
+    expect(r.json.saved.tested_on).toBe('2025-01-05');
+    expect((await call(c, 'log_progress_test', { checkpoint: 'start', results: { flying: { value: 1 } } })).isError).toBe(true);
+    expect((await call(c, 'log_progress_test', { checkpoint: 'start', results: { reach: { nope: 1 } } })).isError).toBe(true);
+    expect((await call(c, 'log_progress_test', { checkpoint: 'start', results: { reach: { value: -4 } } })).isError).toBe(true);
+    expect((await call(c, 'get_history', { kind: 'progress_tests' })).json.checkpoints).toHaveLength(1);
+    await c.close();
+  });
+
+  it('extra sessions and quick-add land in day_extras', async () => {
+    await withPlan();
+    const c = await connect();
+    await call(c, 'add_session_to_day', { date: '2025-01-05', day: 'monday', session: 'Lower A' });
+    await call(c, 'quick_add_exercise', { date: '2025-01-05', exercise: 'push up', sets: 3 });
+    const row = (await db.query('SELECT data FROM day_extras WHERE user_id = $1 AND date = $2', [userId, '2025-01-05']))[0].data;
+    expect(row.sessions).toEqual([{ planId: 'default', day: 'mon', sessionId: 'main' }]);
+    expect(row.quick[0]).toMatchObject({ exerciseId: 'pushup', overrides: { sets: 3 } });
+    const r = await call(c, 'remove_from_day', { date: '2025-01-05', exercise: 'push up' });
+    expect(r.json.removed).toBe(1);
+    await c.close();
+  });
+
+  it('get_history reads body, journal and workouts with ids', async () => {
+    const c = await connect();
+    await call(c, 'log_measurement', { date: '2025-01-05', weight_kg: 70, arms_cm: 31 });
+    await call(c, 'log_journal_entry', { date: '2025-01-05', text: 'ok' });
+    await call(c, 'log_workout', { date: '2025-01-05', exercises: [{ exercise: 'plank', sets: [{ seconds: 30 }] }] });
+    expect((await call(c, 'get_history', { kind: 'body' })).json.measurements[0].id).toBe('measure:2025-01-05:arms');
+    expect((await call(c, 'get_history', { kind: 'journal' })).json.entries[0].id).toBe('journal:2025-01-05');
+    expect((await call(c, 'get_history', { kind: 'workouts' })).json.sets[0]).toMatchObject({ exercise_id: 'plank', source: 'claude' });
+    await c.close();
+  });
+
+  it('none of it can touch another user', async () => {
+    await db.query(`INSERT INTO plans (user_id, plan_id, data) VALUES ($1,'default','{"name":"theirs","days":{}}')`, [otherUserId]);
+    const c = await connect();
+    expect((await call(c, 'list_plans', {})).json.plans).toHaveLength(0);
+    expect((await call(c, 'delete_plan', { plan: 'theirs' })).isError).toBe(true);
+    expect((await db.query('SELECT count(*)::int AS n FROM plans WHERE user_id = $1', [otherUserId]))[0].n).toBe(1);
     await c.close();
   });
 });

@@ -64,7 +64,7 @@ Library → Import media applies a JSON/CSV/Markdown mapping per user and never 
 **Claude connector (MCP) — `server/mcp/`:** remote Streamable-HTTP MCP endpoint at `/mcp` (stateless: a fresh `McpServer` per request, so it
 runs on Vercel; `vercel.json` rewrites `/mcp` to the same function). Auth = per-user token created in the app (Connect Claude page,
 `/api/mcp-token`); only its SHA-256 is stored (`mcp_tokens`). Accepted as `Authorization: Bearer` or as `/mcp/<token>` (claude.ai's connector
-form takes a URL only). Tools in `tools.js`, schemas in `server.js`; every write is user-scoped, `source:'claude'`, returns an id that
+form takes a URL only). Tools in `tools.js` (logging/reads) and `admin.js` (plans via the app's own `lib/plan.js` ops, library, settings, goals, progress tests, day extras, history); schemas in `server.js`; the only thing not exposed is journal photos; every write is user-scoped, `source:'claude'`, returns an id that
 `update_entry`/`delete_entry` take, and honours `request_id` (`mcp_requests`). Meals live in `meals`; a day's nutrition totals =
 `nutrition_logs` row + that day's meals (merged in `GET /api/nutrition-logs`). The server matches exercise names against
 `server/exerciseIndex.generated.json` — regenerate with `node scripts/build-server-index.mjs` when the built-in library changes (a test fails if stale).
