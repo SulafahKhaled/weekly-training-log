@@ -1,5 +1,5 @@
 import { V } from './videos';
-import { DYNAMIC, MOBILITY, STATIC } from './recovery';
+import { DYNAMIC, STATIC } from './recovery';
 
 /* Exercise-type shapes:
    resistance: {type:'resistance', en, ar, sets, reps, rest, vid, note?}
@@ -137,11 +137,6 @@ export const COOLDOWN_INFO = {
   title: 'Cool-down', ar: 'التربيد',
   blurb: 'Static, held stretches — done after training while the muscle is still warm, holding each 20–30 seconds. Browse the full library here, or find just the muscles a given day trains on that day’s Prepare & Recover section.',
   videos: Object.values(STATIC).map((s) => ({ en: s.en, ar: s.ar, vid: s.vid, tips: s.tips })),
-};
-export const MOBILITY_INFO = {
-  title: 'Mobility', ar: 'المرونة والحركة',
-  blurb: 'Controlled Articular Rotations (CARs) and joint-focused drills — slow, deliberate, full-range-of-motion work. This is the layer that builds real, martial-artist-like control at end-range, distinct from both warm-up and stretching.',
-  videos: Object.values(MOBILITY).map((m) => ({ en: m.en, ar: m.ar, vid: m.vid, tips: m.tips, badge: m.badge })),
 };
 
 // DAYS is ordered Sun..Sat (indices 0-6), matching JS Date#getDay() exactly —

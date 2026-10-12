@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Pause, Play, SkipForward, PartyPopper, RotateCcw, Square } from 'lucide-react';
+import { ChevronDown, Pause, Play, SkipForward, PartyPopper, RotateCcw, Square, Check, CircleSlash } from 'lucide-react';
 import ProgressRing from './ProgressRing';
 import { fmtTime } from '../lib/time';
 import { beepTick, vibrate } from '../lib/audio';
@@ -24,8 +24,11 @@ export default function FullscreenTimer({
   meta,
   paused = false,
   onTogglePause,
-  onSkip,
+  onSkip, // (status: 'completed' | 'incomplete') => void — Skip always asks the one question first
   skipLabel = 'Skip',
+  skipQuestion = 'Mark this as…',
+  onAddTime, // (seconds) => void — shown with addTimeOptions (used on rests)
+  addTimeOptions = [],
   onReset,
   onStop,
   onRepeat,
@@ -37,6 +40,10 @@ export default function FullscreenTimer({
 }) {
   const urgent = !complete && remaining > 0 && remaining <= 3;
   const lastTick = useRef(null);
+  const [asking, setAsking] = useState(false);
+
+  // the question belongs to one step — drop it when the step changes or the timer ends
+  useEffect(() => setAsking(false), [title, phase, complete]);
 
   // A sharp tick + haptic buzz on the final 3-2-1 for a bit of drama.
   useEffect(() => {
@@ -112,6 +119,16 @@ export default function FullscreenTimer({
             {titleAr && <div className="fs-title-ar ar">{titleAr}</div>}
             {next && <div className="fs-next">{next}</div>}
 
+            {onAddTime && addTimeOptions.length > 0 && (
+              <div className="fs-addtime" role="group" aria-label="Change break time">
+                {addTimeOptions.map((sec) => (
+                  <button key={sec} className="fs-chip" onClick={() => onAddTime(sec)}>
+                    {sec > 0 ? `+${sec}s` : `−${Math.abs(sec)}s`}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="fs-controls">
               {onReset && (
                 <button className="fs-btn fs-btn-ghost" onClick={onReset}>
@@ -126,7 +143,7 @@ export default function FullscreenTimer({
                 </button>
               )}
               {onSkip && (
-                <button className="fs-btn fs-btn-ghost" onClick={onSkip}>
+                <button className="fs-btn fs-btn-ghost" onClick={() => setAsking(true)}>
                   <SkipForward size={16} />
                   {skipLabel}
                 </button>
@@ -141,6 +158,36 @@ export default function FullscreenTimer({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {asking && !complete && (
+        <div className="fs-ask" role="dialog" aria-label={skipQuestion}>
+          <div className="fs-ask-card">
+            <div className="fs-ask-q">{skipQuestion}</div>
+            <button
+              className="fs-btn fs-btn-solid"
+              style={{ background: 'var(--good)' }}
+              onClick={() => {
+                setAsking(false);
+                onSkip('completed');
+              }}
+            >
+              <Check size={16} /> Completed
+            </button>
+            <button
+              className="fs-btn fs-btn-ghost"
+              onClick={() => {
+                setAsking(false);
+                onSkip('incomplete');
+              }}
+            >
+              <CircleSlash size={16} /> Incomplete
+            </button>
+            <button className="fs-ask-cancel" onClick={() => setAsking(false)}>
+              Keep going
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

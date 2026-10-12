@@ -2,24 +2,35 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ensureSchema, query } from './db.js';
+import { ensureSchema, query, mcpDb } from './db.js';
 import { hashPassword, verifyPassword, createSessionToken, setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from './auth.js';
+import { mountV2 } from './v2.js';
+import { createMcpRouter, hashToken, newToken } from './mcp/router.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function isoDate(d = new Date()) {
-  return d.toISOString().slice(0, 10);
+// Calendar dates are always the Asia/Riyadh date (the app's fixed timezone) — NOT
+// the server's, which on Vercel is UTC and would roll the day over 3 hours late.
+const APP_TZ = 'Asia/Riyadh';
+const dateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+export function isoDate(d = new Date()) {
+  return dateFmt.format(d); // en-CA => YYYY-MM-DD
 }
 
-function computeStreak(dates) {
+function shiftDate(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+export function computeStreak(dates, today = isoDate()) {
   const set = new Set(dates);
   if (set.size === 0) return 0;
-  const cursor = new Date();
-  if (!set.has(isoDate(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let cursor = set.has(today) ? today : shiftDate(today, -1);
   let streak = 0;
-  while (set.has(isoDate(cursor))) {
+  while (set.has(cursor)) {
     streak++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = shiftDate(cursor, -1);
   }
   return streak;
 }
@@ -29,7 +40,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_]{3,24}$/;
 const app = express();
 // Raised from Express's 100kb default to fit base64-encoded journal photos
 // (client-side compressed/resized before upload, but base64 still adds ~33%).
-app.use(express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '16mb' }));
 
 // Runs the schema-creation SQL once per cold start, before any request touches the DB.
 app.use((req, res, next) => {
@@ -170,7 +181,12 @@ api.get('/history/:dayId/:blockIndex', async (req, res) => {
 });
 
 api.get('/streak', async (req, res) => {
-  const rows = await query('SELECT date FROM set_logs WHERE user_id = $1 UNION SELECT date FROM circuit_logs WHERE user_id = $1', [req.user.id]);
+  const rows = await query(
+    `SELECT date FROM set_logs WHERE user_id = $1
+     UNION SELECT date FROM circuit_logs WHERE user_id = $1
+     UNION SELECT date FROM session_items WHERE user_id = $1 AND kind = 'work' AND status = 'completed'`,
+    [req.user.id]
+  );
   res.json({ streak: computeStreak(rows.map((r) => r.date)) });
 });
 
@@ -309,8 +325,18 @@ api.post('/body-measurements', async (req, res) => {
 
 api.get('/nutrition-logs', async (req, res) => {
   const { start, end } = dateRange(req);
-  const rows = await query('SELECT date, calories, protein_g, fiber_g, carbs_g, fat_g, notes FROM nutrition_logs WHERE user_id = $1 AND date BETWEEN $2 AND $3 ORDER BY date ASC', [req.user.id, start, end]);
-  res.json({ logs: rows });
+  const rows = await query('SELECT date, calories, protein_g, fiber_g, carbs_g, fat_g, notes FROM nutrition_logs WHERE user_id = $1 AND date BETWEEN $2 AND $3', [req.user.id, start, end]);
+  // A day's totals are the manual daily row plus every meal logged that day (by hand or by Claude),
+  // so statistics treat them all the same.
+  const meals = await query('SELECT date, calories, protein_g, fiber_g, carbs_g, fat_g FROM meals WHERE user_id = $1 AND date BETWEEN $2 AND $3', [req.user.id, start, end]);
+  const FIELDS = ['calories', 'protein_g', 'fiber_g', 'carbs_g', 'fat_g'];
+  const byDate = new Map(rows.map((r) => [r.date, { ...r }]));
+  for (const m of meals) {
+    const t = byDate.get(m.date) || { date: m.date, calories: null, protein_g: null, fiber_g: null, carbs_g: null, fat_g: null, notes: null };
+    for (const f of FIELDS) if (m[f] != null) t[f] = (t[f] ?? 0) + m[f];
+    byDate.set(m.date, t);
+  }
+  res.json({ logs: [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1)) });
 });
 
 api.post('/nutrition-logs', async (req, res) => {
@@ -359,6 +385,45 @@ api.put('/ui-prefs', async (req, res) => {
   );
   res.json({ ok: true });
 });
+
+/* ---------- Claude connector token + meals ---------- */
+
+api.get('/mcp-token', async (req, res) => {
+  const rows = await query('SELECT created_at, last_used_at FROM mcp_tokens WHERE user_id = $1', [req.user.id]);
+  res.json({ exists: !!rows[0], created_at: rows[0]?.created_at ?? null, last_used_at: rows[0]?.last_used_at ?? null });
+});
+
+// Creates (or regenerates) the token. The plain value is returned ONCE; only its hash is stored.
+api.post('/mcp-token', async (req, res) => {
+  const token = newToken();
+  await query(
+    `INSERT INTO mcp_tokens (user_id, token_hash) VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET token_hash = excluded.token_hash, created_at = now(), last_used_at = NULL`,
+    [req.user.id, hashToken(token)]
+  );
+  res.json({ token });
+});
+
+api.delete('/mcp-token', async (req, res) => {
+  await query('DELETE FROM mcp_tokens WHERE user_id = $1', [req.user.id]);
+  res.json({ ok: true });
+});
+
+api.get('/meals', async (req, res) => {
+  const { start, end } = dateRange(req);
+  const rows = await query('SELECT id, date, meal_type, description, calories, protein_g, fiber_g, carbs_g, fat_g, estimated, source FROM meals WHERE user_id = $1 AND date BETWEEN $2 AND $3 ORDER BY date DESC, id DESC', [req.user.id, start, end]);
+  res.json({ meals: rows });
+});
+
+api.delete('/meals/:id', async (req, res) => {
+  await query('DELETE FROM meals WHERE user_id = $1 AND id = $2', [req.user.id, Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+mountV2(api);
+
+// MCP endpoint — has its own token auth (not the browser session cookie).
+app.use('/mcp', createMcpRouter(mcpDb));
 
 app.use('/api', api);
 

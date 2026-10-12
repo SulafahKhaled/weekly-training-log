@@ -15,6 +15,9 @@
    DAYS in days.js they aren't transcribed from Arabic source text.
    ========================================================= */
 
+import { MOBILITY_A, MOBILITY_B } from './pdfProgram';
+import { MEDIA_MAP } from './mediaMap.generated';
+
 export const DYNAMIC = {
   fullBodyCardio: {
     en: 'Full-Body / Cardio',
@@ -61,50 +64,21 @@ export const DYNAMIC = {
   },
 };
 
+// Mobility layer — sourced ONLY from the flexibility & stick PDF (see pdfProgram.js). The keys are
+// kept (they're what DAY_RECOVERY below refers to); each now points at the PDF's own drill:
+//   shoulderCARs → Mobility B #1   hip9090 → Mobility A #3   tSpineRotation → Mobility B #3 (Open book)
+//   ankleMobility → Mobility A #2  wristMobility → Mobility B #8
+// Videos come from the verified media mapping (exercise-media-map.md) for the same PDF drill.
+const ytId = (url) => (url ? new URL(url).searchParams.get('v') : null);
+const fromPdf = (item, covers) => ({ en: item.en, ar: item.ar, vid: ytId(MEDIA_MAP[item.id]?.url), covers, tips: [item.how, item.dose] });
+const byId = (list, id) => list.find((x) => x.id === id);
+
 export const MOBILITY = {
-  shoulderCARs: {
-    en: 'Shoulder CARs',
-    ar: 'دوران الكتف الكامل (CARs)',
-    vid: '2hyNG1U5wYs',
-    covers: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
-    tips: ['Move slowly and own every degree of the circle — don’t let momentum carry the joint.', 'Keep the rest of the body still so only the shoulder moves.', '2–3 slow circles each direction, each arm.'],
-  },
-  hip9090: {
-    en: 'Hip 90/90 Rotation',
-    ar: 'دوران الحوض ٩٠/٩٠',
-    vid: 'KOV5iN86EwM',
-    covers: ['glutes', 'hipFlexors', 'adductors', 'quadsHamstrings'],
-    tips: ['Rotate from the hip, not by twisting the lower back.', 'Keep both sit-bones on the floor through the movement.', '5 controlled reps each side.'],
-  },
-  tSpineRotation: {
-    en: 'T-Spine (Thoracic) Rotation',
-    ar: 'دوران الظهر العلوي',
-    vid: 'h54us18qc20',
-    covers: ['abs', 'obliquesLowerBack'],
-    tips: ['Rotate through the mid-back, keep the hips facing forward the whole time.', 'Follow the moving hand with your eyes to encourage full rotation.', '5 slow reps each side.'],
-  },
-  ankleMobility: {
-    en: 'Ankle Mobility (CARs-based)',
-    ar: 'مرونة الكاحل',
-    vid: 'Zq3HYp6MCkw',
-    covers: ['calves'],
-    tips: ['Drive the knee forward over the toes without the heel lifting.', 'Move to the edge of the range and pause a beat before returning.', '8–10 controlled reps each ankle.'],
-  },
-  wristMobility: {
-    en: 'Wrist Mobility',
-    ar: 'مرونة الرسغ',
-    vid: 'nvJ-1suJCTU',
-    covers: [],
-    tips: ['Small range, done slow — this is prep for load-bearing on planks and push-ups, not a stretch.', 'Circle in both directions, then flex/extend through the full range.', '8–10 reps each direction, each wrist.'],
-  },
-  primalFlow: {
-    en: 'Full-Body Primal Movement Flow',
-    ar: 'تدفق حركي كامل الجسم (أسبوعي)',
-    vid: 'IZi0rl8G-qw',
-    covers: [],
-    badge: 'Weekly bonus',
-    tips: ['Move continuously and stay low — this connects movement across the whole body rather than isolating one joint.', 'Breathe steadily; holding your breath means you’re moving too fast.', '5–10 minutes, any day you want extra movement fluency.'],
-  },
+  shoulderCARs: fromPdf(byId(MOBILITY_B, 'shoulder_cars'), ['chest', 'back', 'shoulders', 'biceps', 'triceps']),
+  hip9090: fromPdf(byId(MOBILITY_A, 'ninety_ninety'), ['glutes', 'hipFlexors', 'adductors', 'quadsHamstrings']),
+  tSpineRotation: fromPdf(byId(MOBILITY_B, 'open_book'), ['abs', 'obliquesLowerBack']),
+  ankleMobility: fromPdf(byId(MOBILITY_A, 'ankle_wall'), ['calves']),
+  wristMobility: fromPdf(byId(MOBILITY_B, 'wrist_prep'), []),
 };
 
 export const STATIC = {

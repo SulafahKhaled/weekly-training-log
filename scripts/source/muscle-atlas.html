@@ -1,0 +1,688 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Muscle Atlas 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@somakine/core": "https://cdn.jsdelivr.net/npm/@somakine/core@0.2.0/dist/index.js",
+    "@somakine/viewer": "https://cdn.jsdelivr.net/npm/@somakine/viewer@0.2.0/dist/index.js"
+  }
+}
+</script>
+<style>
+  :root{
+    --paper:#eef2ee;
+    --surface:#ffffff;
+    --surface-2:#e2e9e1;
+    --ink:#182420;
+    --ink-soft:#57655d;
+    --line:#c7d2c6;
+    --canvas-bg:#dfe7dd;
+    --accent-select:#c98a1f;
+    --accent-select-soft:#f2e2bf;
+    --accent-primary:#c1442d;
+    --accent-primary-soft:#f2ddd6;
+    --accent-secondary:#2f7d74;
+    --accent-secondary-soft:#d9ebe8;
+    --accent-proxy:#7a5ea8;
+    --accent-proxy-soft:#e4dcf2;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(24,36,32,.06), 0 8px 24px -12px rgba(24,36,32,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#111714; --surface:#1a221e; --surface-2:#212b25; --ink:#e9efe8; --ink-soft:#a7b5ac;
+      --line:#33403a; --canvas-bg:#182420;
+      --accent-select:#e0a83f; --accent-select-soft:#3a3320;
+      --accent-primary:#e0654a; --accent-primary-soft:#3b241f;
+      --accent-secondary:#49a89d; --accent-secondary-soft:#1c3733;
+      --accent-proxy:#a58ed6; --accent-proxy-soft:#2c2740;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#111714; --surface:#1a221e; --surface-2:#212b25; --ink:#e9efe8; --ink-soft:#a7b5ac;
+    --line:#33403a; --canvas-bg:#182420;
+    --accent-select:#e0a83f; --accent-select-soft:#3a3320;
+    --accent-primary:#e0654a; --accent-primary-soft:#3b241f;
+    --accent-secondary:#49a89d; --accent-secondary-soft:#1c3733;
+    --accent-proxy:#a58ed6; --accent-proxy-soft:#2c2740;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Work Sans",system-ui,sans-serif;padding:0 16px;padding-block:24px 48px;}
+  .wrap{max-width:1160px;margin:0 auto;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px;}
+  h1{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:clamp(28px,5vw,42px);margin:0 0 10px;text-wrap:balance;}
+  .lede{font-size:14.5px;line-height:1.55;color:var(--ink-soft);max-width:64ch;margin:0;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .dot-select{background:var(--accent-select);} .dot-primary{background:var(--accent-primary);}
+  .dot-secondary{background:var(--accent-secondary);} .dot-proxy{background:var(--accent-proxy);}
+
+  .layout{display:grid;grid-template-columns:minmax(320px,560px) 1fr;gap:24px;align-items:start;}
+  @media (max-width:840px){.layout{grid-template-columns:1fr;}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+  .viewer-card{padding:14px;}
+  .viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .hint{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);}
+  .reset-btn{font-family:"Work Sans",sans-serif;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer;}
+  .reset-btn:hover{border-color:var(--ink-soft);}
+
+  .canvas-wrap{position:relative;width:100%;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--canvas-bg);}
+  #viewer-host{position:absolute;inset:0;}
+  #viewer-host canvas{display:block;width:100%!important;height:100%!important;touch-action:none;}
+  .loading-veil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:var(--canvas-bg);font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft);transition:opacity .25s;}
+  .loading-veil[hidden]{display:none;}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent-select);animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .muscle-list{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;}
+  .muscle-btn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:12px;font-family:"Work Sans",sans-serif;cursor:pointer;}
+  .muscle-btn:hover{border-color:var(--ink-soft);}
+  .muscle-btn.active{background:var(--accent-select-soft);border-color:transparent;font-weight:600;}
+  .muscle-btn .tag{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--accent-proxy);margin-left:4px;}
+
+  .panel{padding:18px;min-height:220px;}
+  .panel .kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 4px;}
+  .panel h2{font-family:"Big Shoulders Display",sans-serif;font-weight:700;font-size:26px;margin:0 0 4px;}
+  .panel .sub{font-size:13px;color:var(--ink-soft);margin:0 0 10px;}
+  .datamode{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;padding:2px 8px;border-radius:999px;margin-bottom:10px;}
+  .datamode.real{background:var(--accent-secondary-soft);color:var(--accent-secondary);}
+  .datamode.proxy,.datamode.marker{background:var(--accent-proxy-soft);color:var(--accent-proxy);}
+  .role-block{margin-bottom:14px;}
+  .role-block h3{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-family:"IBM Plex Mono",monospace;margin:0 0 8px;display:flex;align-items:center;gap:6px;}
+  .role-block h3 i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;line-height:1.2;font-family:"Work Sans",sans-serif;}
+  .chip:hover{border-color:var(--ink-soft);}
+  .chip.primary{background:var(--accent-primary-soft);border-color:transparent;}
+  .chip.secondary{background:var(--accent-secondary-soft);border-color:transparent;}
+  .chip .day-tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-soft);margin-left:6px;}
+  .direction{font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.55;background:var(--surface-2);border-radius:10px;padding:10px 12px;color:var(--ink);}
+  .note{margin-top:10px;font-size:12.5px;color:var(--ink-soft);background:var(--accent-proxy-soft);border-radius:8px;padding:8px 10px;}
+
+  .browser{margin-top:20px;padding:16px;}
+  .browser-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .browser-head h2{font-family:"Big Shoulders Display",sans-serif;font-weight:700;font-size:20px;margin:0;}
+  #search{font-family:"Work Sans",sans-serif;font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);min-width:180px;}
+  #search:focus{outline:2px solid var(--accent-select);outline-offset:1px;}
+  .day-group{border-top:1px solid var(--line);}
+  .day-head{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:11px 2px;cursor:pointer;font-family:"Work Sans",sans-serif;color:var(--ink);}
+  .day-head .en{font-weight:600;font-size:14.5px;}
+  .day-head .ar{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft);direction:rtl;}
+  .day-group.open .caret{transform:rotate(90deg);}
+  .day-list{display:none;flex-wrap:wrap;gap:7px;padding:2px 2px 14px;}
+  .day-group.open .day-list{display:flex;}
+  .ex-pill{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:"Work Sans",sans-serif;}
+  .ex-pill:hover{border-color:var(--ink-soft);}
+  .ex-pill.active{background:var(--accent-select-soft);border-color:transparent;font-weight:600;}
+  .ex-pill[hidden]{display:none;}
+
+  .citation{margin-top:20px;padding:16px 18px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);}
+  .citation h2{font-family:"Big Shoulders Display",sans-serif;font-weight:700;font-size:18px;color:var(--ink);margin:0 0 8px;}
+  .citation a{color:var(--ink);}
+  .citation code{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--surface-2);padding:1px 5px;border-radius:4px;}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Weekly plan &middot; real anatomical 3D reference</p>
+    <h1>Muscle Atlas 3D</h1>
+    <p class="lede">A real, rotatable 3D muscular model &mdash; not a drawing. Drag to orbit, scroll to zoom, click any muscle to see which exercises train it, or click an exercise below to see exactly which muscles light up.</p>
+    <div class="legend">
+      <span><i class="dot-select"></i> selected</span>
+      <span><i class="dot-primary"></i> primary mover (mobility: stretched)</span>
+      <span><i class="dot-secondary"></i> secondary / stabilizer (mobility: active)</span>
+      <span><i class="dot-proxy"></i> nearest real landmark (see note)</span>
+    </div>
+  </header>
+
+  <div class="layout" style="margin-top:18px;">
+    <div class="card viewer-card">
+      <div class="viewer-toolbar">
+        <span class="hint">drag = rotate &middot; scroll = zoom</span>
+        <button class="reset-btn" id="reset-view">Reset view</button>
+      </div>
+      <div class="canvas-wrap">
+        <div id="viewer-host"></div>
+        <div class="loading-veil" id="loading-veil">
+          <div class="spinner"></div>
+          <div id="loading-text">Loading real muscle geometry&hellip;</div>
+        </div>
+      </div>
+      <div class="muscle-list" id="muscle-list"></div>
+    </div>
+
+    <div class="card panel" id="panel"></div>
+  </div>
+
+  <div class="card browser">
+    <div class="browser-head">
+      <h2>Browse by day</h2>
+      <input id="search" type="text" placeholder="Search an exercise&hellip;" aria-label="Search exercises">
+    </div>
+    <div id="days"></div>
+  </div>
+
+  <div class="card citation">
+    <h2>Where the 3D model comes from</h2>
+    <p><strong>Anatomy data:</strong> <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html" target="_blank" rel="noopener">BodyParts3D / Anatomography</a>, &copy; The Database Center for Life Science (DBCLS), Japan &mdash; licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Packaged as a ready-to-render open data pack by the <a href="https://github.com/ivershuo/somakine" target="_blank" rel="noopener">Somakine project</a> (<code>@somakine/bodyparts3d-musculoskeletal</code>, CC BY 4.0).</p>
+    <p><strong>Renderer:</strong> the open-source <a href="https://github.com/ivershuo/somakine" target="_blank" rel="noopener">Somakine viewer</a> (<code>@somakine/viewer</code> + <code>@somakine/core</code>, MIT) built on <a href="https://threejs.org" target="_blank" rel="noopener">Three.js</a> (MIT, mrdoob &amp; contributors).</p>
+    <p>Of the 45 real muscle meshes shown, a few muscles used in this plan have no separate mesh in this open dataset (latissimus dorsi, rectus abdominis, transverse abdominis, quadratus lumborum, tensor fasciae latae). Those are flagged <span class="datamode proxy" style="display:inline;padding:1px 6px;">proxy / note</span> in their panel and shown via the nearest real, anatomically adjacent muscle instead of an invented mesh &mdash; see each panel's note for exactly what's real vs. approximate.</p>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { createSomakine } from "@somakine/viewer";
+
+const STRUCT = (slug) => "somakine:structure:" + slug;
+
+// key -> { label, mode: 'real'|'proxy'|'marker', ids: [structure slugs], note }
+const MUSCLES = {
+  deltoid:      {label:"Deltoid",              mode:"real",  ids:["deltoid"],
+                 note:"Anterior, medial & posterior fibres share one mesh in this dataset — the written plan keeps the three heads separate."},
+  pecMajor:     {label:"Pectoralis Major",     mode:"real",  ids:["pectoralis-major","pectoralis-minor"]},
+  serratusAnt:  {label:"Serratus Anterior",    mode:"real",  ids:["serratus-anterior"]},
+  biceps:       {label:"Biceps Brachii",       mode:"real",  ids:["biceps-brachii"]},
+  brachialis:   {label:"Brachialis",           mode:"proxy", ids:["brachioradialis"],
+                 note:"Brachialis itself has no separate mesh here — showing Brachioradialis, its close synergist in the same forearm layer."},
+  triceps:      {label:"Triceps Brachii",      mode:"real",  ids:["triceps-brachii"]},
+  forearmExt:   {label:"Forearm Extensors",    mode:"real",  ids:["extensor-carpi-radialis-brevis","extensor-carpi-radialis-longus","extensor-digitorum"]},
+  trapezius:    {label:"Trapezius",            mode:"real",  ids:["trapezius"],
+                 note:"Upper and mid/lower trapezius share one mesh in this dataset — the written plan keeps them separate."},
+  rhomboids:    {label:"Rhomboids",            mode:"real",  ids:["rhomboid-major"]},
+  rotatorCuff:  {label:"Rotator Cuff",         mode:"real",  ids:["infraspinatus","supraspinatus","subscapularis","teres-minor"]},
+  lats:         {label:"Latissimus Dorsi",     mode:"proxy", ids:["teres-major"],
+                 note:"Latissimus dorsi has no separate mesh in this open dataset. Teres Major, its direct neighbour at the lower shoulder blade, is highlighted as the nearest real landmark."},
+  erectorSpinae:{label:"Erector Spinae",       mode:"real",  ids:["erector-spinae"]},
+  qLumborum:    {label:"Quadratus Lumborum",   mode:"proxy", ids:["erector-spinae"],
+                 note:"Quadratus lumborum has no separate mesh here. Erector Spinae, the adjacent low-back muscle group, is highlighted instead."},
+  obliques:     {label:"Obliques",             mode:"real",  ids:["external-oblique"],
+                 note:"Only External Oblique has a mesh in this dataset; Internal Oblique sits directly beneath it, in the same spot."},
+  rectusAbd:    {label:"Rectus Abdominis",     mode:"marker", ids:["external-oblique"],
+                 note:"Rectus abdominis has no mesh in this open dataset. External Oblique is shown dimmed as a rough position reference — rectus abdominis itself sits medial to it, at the front midline."},
+  transverseAbd:{label:"Transverse Abdominis", mode:"marker", ids:["external-oblique"],
+                 note:"Transverse abdominis (the deepest ab layer) has no mesh in this open dataset. External Oblique is shown dimmed as a rough position reference."},
+  hipFlexors:   {label:"Hip Flexors",          mode:"real",  ids:["psoas-major","iliacus"]},
+  tfl:          {label:"Tensor Fasciae Latae", mode:"proxy", ids:["gluteus-minimus"],
+                 note:"TFL has no separate mesh here. Gluteus Minimus, its neighbour at the outer hip, is highlighted as the nearest real landmark."},
+  gluteMax:     {label:"Gluteus Maximus",      mode:"real",  ids:["gluteus-maximus"]},
+  gluteMed:     {label:"Gluteus Medius/Minimus",mode:"real", ids:["gluteus-medius","gluteus-minimus"]},
+  quads:        {label:"Quadriceps",           mode:"real",  ids:["quadriceps"]},
+  hamstrings:   {label:"Hamstrings",           mode:"real",  ids:["biceps-femoris","semitendinosus","semimembranosus"]},
+  adductors:    {label:"Adductors",            mode:"real",  ids:["adductor-brevis","adductor-longus","adductor-magnus","gracilis"]},
+  calves:       {label:"Calves",               mode:"real",  ids:["gastrocnemius","soleus","tibialis-posterior","plantaris"]},
+  tibialisAnt:  {label:"Tibialis Anterior",    mode:"real",  ids:["tibialis-anterior"]},
+  fibularis:    {label:"Fibularis (Peroneals)", mode:"real", ids:["fibularis-longus","fibularis-brevis"]},
+  sartorius:    {label:"Sartorius",            mode:"real",  ids:["sartorius"]},
+  deepRotators: {label:"Deep Hip Rotators",    mode:"real",  ids:["piriformis","obturator-internus"],
+                 note:"Piriformis and obturator internus are modeled. Gemelli and quadratus femoris have no separate mesh in this dataset."},
+  levatorScap:  {label:"Levator Scapulae",     mode:"real",  ids:["levator-scapulae"]},
+  forearmFlex:  {label:"Forearm Flexors",      mode:"real",  ids:["flexor-carpi-radialis"],
+                 note:"Only flexor carpi radialis has a mesh here; the other wrist and finger flexors sit alongside it."},
+  footFlexors:  {label:"Foot Intrinsics (sole)", mode:"real", ids:["flexor-digitorum-brevis"]}
+};
+
+// Older key names collapse onto the single real mesh available in 3D.
+const ALIAS = { antDelt:"deltoid", medDelt:"deltoid", postDelt:"deltoid", upperTrap:"trapezius", midTrap:"trapezius", lowerTrap:"trapezius", multifidus:"erectorSpinae", intOblique:"obliques" };
+function norm(key){ return ALIAS[key] || key; }
+
+const DAYS = [
+  {key:"sun", en:"Sunday &mdash; Upper A", ar:"الأحد"},
+  {key:"mon", en:"Monday &mdash; Lower A", ar:"الاثنين"},
+  {key:"tue", en:"Tuesday &mdash; HIIT 1", ar:"الثلاثاء"},
+  {key:"wed", en:"Wednesday &mdash; Hips + Core", ar:"الأربعاء"},
+  {key:"thu", en:"Thursday &mdash; Upper B", ar:"الخميس"},
+  {key:"fri", en:"Friday &mdash; Lower B", ar:"الجمعة"},
+  {key:"sat", en:"Saturday &mdash; HIIT 2", ar:"السبت"},
+  {key:"xcore",  short:"Extra core",  en:"Extra &mdash; Core and trunk", ar:"إضافي"},
+  {key:"xupper", short:"Extra upper", en:"Extra &mdash; Upper body", ar:"إضافي"},
+  {key:"xlower", short:"Extra lower", en:"Extra &mdash; Lower body and glutes", ar:"إضافي"},
+  {key:"xhiit",  short:"Extra HIIT",  en:"Extra &mdash; HIIT and conditioning", ar:"إضافي"},
+  {key:"mobA",   short:"Mobility A",  en:"Mobility A &mdash; Hips and legs", ar:"موبيليتي A"},
+  {key:"mobB",   short:"Mobility B",  en:"Mobility B &mdash; Shoulders, thoracic, wrists", ar:"موبيليتي B"},
+  {key:"mobC",   short:"Mobility C",  en:"Mobility C &mdash; Spine and floor movement", ar:"موبيليتي C"},
+  {key:"yoga",   short:"Yoga",        en:"Long yoga session &mdash; Wednesday", ar:"يوغا"},
+  {key:"fascia", short:"Fascia",      en:"Fascia release &mdash; roller and ball", ar:"فك الفاسيا"},
+  {key:"stick1", short:"Stick L1",    en:"Stick drills &mdash; Level 1 control", ar:"العصا ١"},
+  {key:"stick2", short:"Stick L2",    en:"Stick drills &mdash; Level 2 speed", ar:"العصا ٢"},
+  {key:"stick3", short:"Stick L3",    en:"Stick drills &mdash; Level 3 fighting", ar:"العصا ٣"}
+];
+const MOBILITY_GROUPS = ["mobA","mobB","mobC","yoga","fascia"];
+
+const RAW_EXERCISES = [
+  {id:"bench_press", name:"Dumbbell Bench Press", days:["sun"], primary:["pecMajor"], secondary:["antDelt","triceps","serratusAnt"], direction:"Horizontal push — sagittal plane, shoulder horizontal adduction + elbow extension"},
+  {id:"bent_over_rows", name:"Dumbbell Bent-Over Rows", days:["sun"], primary:["lats","rhomboids","midTrap"], secondary:["postDelt","biceps","erectorSpinae"], direction:"Horizontal pull — sagittal plane, shoulder extension + scapular retraction"},
+  {id:"shoulder_press", name:"Dumbbell Shoulder Press", days:["sun"], primary:["antDelt","medDelt"], secondary:["triceps","upperTrap","serratusAnt","rotatorCuff"], direction:"Vertical push — scapular plane, shoulder flexion/abduction + elbow extension"},
+  {id:"around_the_world", name:"Around the World", days:["sun"], primary:["antDelt","medDelt","rotatorCuff"], secondary:["postDelt","upperTrap","serratusAnt"], direction:"Circular/rotational — shoulder flexion, abduction & horizontal extension across frontal + sagittal planes"},
+  {id:"db_curls", name:"Dumbbell Curls", days:["sun"], primary:["biceps"], secondary:["brachialis"], direction:"Sagittal plane, elbow flexion"},
+  {id:"kickbacks", name:"Kickbacks", days:["sun"], primary:["triceps"], secondary:["postDelt"], direction:"Sagittal plane, elbow extension with shoulder held in extension"},
+  {id:"plank", name:"Plank Hold", days:["sun","tue"], primary:["rectusAbd","transverseAbd"], secondary:["obliques","erectorSpinae","gluteMax","serratusAnt"], direction:"Isometric anti-extension, no joint movement"},
+  {id:"chair_squat", name:"Chair Squat", days:["mon"], primary:["quads","gluteMax"], secondary:["hamstrings","adductors","erectorSpinae"], direction:"Sagittal plane, combined hip + knee extension"},
+  {id:"lunges", name:"Dumbbell Lunges", days:["mon"], primary:["quads","gluteMax"], secondary:["hamstrings","gluteMed","adductors","calves"], direction:"Sagittal plane, unilateral split-stance push"},
+  {id:"cossack_squats", name:"Cossack Squats", days:["mon"], primary:["adductors","gluteMax"], secondary:["quads","hamstrings","gluteMed"], direction:"Frontal (lateral) plane — side-to-side squat with weight shift"},
+  {id:"calf_raises", name:"Step Standing Calf Raises", days:["mon"], primary:["calves"], secondary:[], direction:"Sagittal plane, ankle plantarflexion"},
+  {id:"jump_squats", name:"Jump Squats", days:["mon","tue"], primary:["quads","gluteMax"], secondary:["hamstrings","calves","adductors"], direction:"Sagittal plane — explosive vertical triple extension"},
+  {id:"wall_sit", name:"Wall Sit Hold", days:["mon"], primary:["quads"], secondary:["gluteMax","hamstrings"], direction:"Isometric static hip/knee flexion hold"},
+  {id:"step_ups_fast", name:"Fast Step-ups", days:["tue"], primary:["gluteMax","quads"], secondary:["hamstrings","calves","gluteMed"], direction:"Sagittal plane, unilateral vertical push"},
+  {id:"jumping_jacks", name:"Jumping Jacks", days:["tue"], primary:["medDelt","gluteMed","adductors"], secondary:["calves"], direction:"Frontal plane — simultaneous shoulder and hip abduction/adduction"},
+  {id:"high_knees", name:"Sprint in Place (High Knees)", days:["tue"], primary:["hipFlexors","quads"], secondary:["gluteMax","calves"], direction:"Sagittal plane, rapid alternating hip flexion/extension"},
+  {id:"mountain_climbers", name:"Mountain Climbers", days:["tue"], primary:["rectusAbd","hipFlexors"], secondary:["obliques","serratusAnt","antDelt"], direction:"Sagittal plane — alternating hip flexion/extension in a plank"},
+  {id:"hip_flexor_march", name:"Supine Hip Flexor March", days:["wed"], primary:["hipFlexors"], secondary:["rectusAbd","transverseAbd","obliques"], direction:"Sagittal plane, alternating hip flexion (supine)"},
+  {id:"lateral_hip_steps", name:"Seated Lateral Hip Steps", days:["wed"], primary:["gluteMed"], secondary:["tfl","gluteMax","adductors"], direction:"Frontal plane, hip abduction"},
+  {id:"leg_circles", name:"Side-Lying Leg Circles", days:["wed"], primary:["gluteMed"], secondary:["tfl","gluteMax","hipFlexors"], direction:"Circular / multiplanar hip motion"},
+  {id:"inner_thigh_raise", name:"Side-Lying Inner Thigh Raise", days:["wed"], primary:["adductors"], secondary:["obliques"], direction:"Frontal plane, hip adduction"},
+  {id:"hip_adduction_squeeze", name:"Hip Adduction Squeeze", days:["wed"], primary:["adductors"], secondary:[], direction:"Isometric frontal-plane hip adduction"},
+  {id:"wood_chops", name:"Wood Chops", days:["wed"], primary:["obliques"], secondary:["rectusAbd","transverseAbd","gluteMax"], direction:"Transverse plane, diagonal trunk rotation"},
+  {id:"halo_wood_chops", name:"Halo + Wood Chops", days:["wed"], primary:["obliques","antDelt","medDelt","postDelt"], secondary:["upperTrap"], direction:"Transverse/circular rotation combined with a diagonal chop"},
+  {id:"bicycle_crunches", name:"Bicycle Crunches", days:["wed"], primary:["rectusAbd","obliques"], secondary:["hipFlexors"], direction:"Combined sagittal + transverse plane"},
+  {id:"windshield_wiper", name:"Windshield Wiper", days:["wed"], primary:["obliques"], secondary:["rectusAbd","hipFlexors","transverseAbd"], direction:"Transverse plane, rotational"},
+  {id:"side_plank", name:"Side Plank Hold", days:["wed"], primary:["obliques","qLumborum"], secondary:["gluteMed","transverseAbd"], direction:"Isometric frontal-plane anti-lateral-flexion"},
+  {id:"declined_pushup", name:"Declined Push-up", days:["thu"], primary:["pecMajor","antDelt"], secondary:["triceps","serratusAnt"], direction:"Sagittal plane, horizontal-to-incline push (feet elevated → more upper-chest emphasis)"},
+  {id:"band_pulldown", name:"Band Pull-Down", days:["thu"], primary:["lats"], secondary:["postDelt","rhomboids","midTrap","biceps"], direction:"Sagittal plane, vertical / diagonal pull"},
+  {id:"lateral_raises", name:"Lateral Raises", days:["thu"], primary:["medDelt"], secondary:["rotatorCuff","upperTrap","serratusAnt"], direction:"Frontal plane, shoulder abduction"},
+  {id:"face_pulls", name:"Face Pulls", days:["thu"], primary:["postDelt","midTrap","rhomboids"], secondary:["rotatorCuff"], direction:"Transverse/scapular plane — horizontal abduction + external rotation"},
+  {id:"hammer_curls", name:"Dumbbell Hammer Curls", days:["thu"], primary:["brachialis"], secondary:["biceps"], direction:"Sagittal plane, elbow flexion (neutral grip)"},
+  {id:"triceps_ext", name:"Triceps Overhead Extension", days:["thu"], primary:["triceps"], secondary:[], direction:"Sagittal plane, elbow extension, shoulder flexed overhead"},
+  {id:"superman", name:"Superman Hold", days:["thu"], primary:["erectorSpinae","gluteMax"], secondary:["hamstrings","postDelt","rhomboids"], direction:"Isometric spinal extension, prone"},
+  {id:"leg_extension", name:"Dumbbell Leg Extension", days:["fri"], primary:["quads"], secondary:["hipFlexors"], direction:"Sagittal plane, open-chain knee extension"},
+  {id:"leg_curls", name:"Leg Curls", days:["fri"], primary:["hamstrings"], secondary:["calves","gluteMax"], direction:"Sagittal plane, open-chain knee flexion"},
+  {id:"glutes_bridge", name:"Glutes Bridge", days:["fri"], primary:["gluteMax"], secondary:["hamstrings","erectorSpinae","adductors"], direction:"Sagittal plane, hip extension (supine)"},
+  {id:"side_leg_raises", name:"Side Leg Raises", days:["fri"], primary:["gluteMed"], secondary:["tfl","gluteMax"], direction:"Frontal plane, hip abduction (side-lying)"},
+  {id:"laying_leg_raises", name:"Laying Leg Raises", days:["fri"], primary:["rectusAbd","hipFlexors"], secondary:["obliques","transverseAbd"], direction:"Sagittal plane, hip flexion + posterior pelvic tilt"},
+  {id:"broad_jump", name:"Broad Jump", days:["fri"], primary:["gluteMax","quads","hamstrings"], secondary:["calves","hipFlexors"], direction:"Sagittal plane, horizontal explosive triple extension"},
+  {id:"glute_bridge_hold", name:"Glute Bridge Hold", days:["fri"], primary:["gluteMax"], secondary:["hamstrings","erectorSpinae"], direction:"Isometric hip-extension hold"},
+  {id:"step_ups_knee_drive", name:"Step-ups + Knee Drive", days:["sat"], primary:["gluteMax","quads"], secondary:["hipFlexors","hamstrings","gluteMed"], direction:"Sagittal plane — vertical push + hip flexion drive"},
+  {id:"outdoor_sprint", name:"Outdoor Sprint", days:["sat"], primary:["gluteMax","hamstrings","quads","calves"], secondary:["hipFlexors"], direction:"Sagittal plane, cyclical hip/knee/ankle extension-flexion"},
+  {id:"lateral_jumps", name:"Lateral Jumps", days:["sat"], primary:["gluteMed","adductors","quads"], secondary:["calves","gluteMax"], direction:"Frontal plane — lateral bounding with triple extension"},
+  {id:"toe_touches", name:"Toe Touches", days:["sat"], primary:["rectusAbd"], secondary:["hipFlexors","obliques"], direction:"Sagittal plane, spinal flexion (supine)"},
+  {id:"skater_jumps", name:"Skater Jumps", days:["sat"], primary:["gluteMed","gluteMax","adductors"], secondary:["quads","hamstrings","calves"], direction:"Frontal plane lateral bound with single-leg landing"},
+  {id:"hollow_hold", name:"Hollow Hold", days:["sat"], primary:["rectusAbd","transverseAbd"], secondary:["hipFlexors","obliques"], direction:"Isometric sagittal-plane spinal flexion / anti-extension"}
+];
+
+// ---- Extra exercises, mobility sessions, yoga, fascia release and stick drills ----
+// For mobility groups (see MOBILITY_GROUPS): "primary" = muscle being lengthened / targeted,
+// "secondary" = muscle actively working or controlling the range.
+const X = (id, name, days, primary, secondary, direction) => ({id, name, days, primary, secondary, direction});
+RAW_EXERCISES.push(
+  // Extra: core and trunk
+  X("russian_twist","Russian Twist",["xcore"],["obliques","rectusAbd"],["transverseAbd","hipFlexors","erectorSpinae","serratusAnt"],"Transverse plane, alternating trunk rotation on top of a sagittal-plane V-sit hold"),
+  X("dead_bug","Dead Bug",["xcore"],["rectusAbd","transverseAbd"],["obliques","hipFlexors","serratusAnt"],"Sagittal plane anti-extension: limbs move while the lower back stays flat"),
+  X("bird_dog","Bird Dog",["xcore"],["erectorSpinae","gluteMax","antDelt"],["transverseAbd","obliques","gluteMed","trapezius","serratusAnt","triceps"],"Sagittal-plane limb motion with transverse-plane anti-rotation of the trunk"),
+  X("reverse_crunch","Reverse Crunch",["xcore"],["rectusAbd"],["obliques","transverseAbd","hipFlexors"],"Sagittal plane, posterior pelvic tilt with lumbar flexion"),
+  X("crunch","Crunch",["xcore"],["rectusAbd"],["obliques","transverseAbd"],"Sagittal plane, thoracolumbar flexion"),
+  X("v_up","V-Up (Jackknife)",["xcore"],["rectusAbd","hipFlexors","quads"],["transverseAbd","obliques","tfl","sartorius"],"Sagittal plane, simultaneous trunk and hip flexion"),
+  X("side_crunch","Oblique Side Crunch",["xcore"],["obliques"],["qLumborum","rectusAbd","erectorSpinae"],"Frontal plane, lateral flexion of the trunk"),
+  X("flutter_kicks","Flutter Kicks",["xcore"],["hipFlexors","quads","rectusAbd"],["sartorius","tfl","transverseAbd"],"Sagittal plane, small alternating hip flexion and extension with lumbar anti-extension"),
+  X("pallof","Pallof Press (band)",["xcore"],["obliques","transverseAbd"],["rectusAbd","erectorSpinae","gluteMed","serratusAnt","pecMajor","antDelt","triceps"],"Transverse plane, isometric anti-rotation"),
+  X("shoulder_taps","Plank Shoulder Taps",["xcore"],["rectusAbd","transverseAbd","obliques"],["serratusAnt","pecMajor","antDelt","gluteMax","quads"],"Transverse-plane anti-rotation in a sagittal-plane plank"),
+  // Extra: upper body
+  X("pushup","Push-up",["xupper"],["pecMajor","antDelt","triceps"],["serratusAnt","rectusAbd","transverseAbd","gluteMax"],"Horizontal push, shoulder horizontal adduction plus elbow extension"),
+  X("diamond_pushup","Diamond Push-up",["xupper"],["triceps","pecMajor"],["antDelt","serratusAnt","rectusAbd"],"Horizontal push with a narrow grip, elbow extension dominant"),
+  X("pike_pushup","Pike Push-up",["xupper"],["antDelt","medDelt","triceps"],["upperTrap","serratusAnt","pecMajor","rotatorCuff"],"Vertical push, shoulder flexion with scapular upward rotation"),
+  X("db_fly","Dumbbell Fly",["xupper"],["pecMajor"],["antDelt","biceps","serratusAnt"],"Transverse plane, shoulder horizontal adduction"),
+  X("pullover","Dumbbell Pullover",["xupper"],["pecMajor","lats"],["triceps","serratusAnt","rectusAbd"],"Sagittal plane, shoulder extension from an overhead position"),
+  X("bench_dips","Bench Dips (chair)",["xupper"],["triceps"],["pecMajor","antDelt","serratusAnt","levatorScap"],"Sagittal plane, shoulder extension plus elbow extension"),
+  X("arnold_press","Arnold Press",["xupper"],["antDelt","medDelt"],["triceps","upperTrap","serratusAnt","rotatorCuff"],"Vertical push in the scapular plane with shoulder rotation"),
+  X("front_raise","Dumbbell Front Raise",["xupper"],["antDelt","pecMajor"],["serratusAnt","upperTrap","biceps"],"Sagittal plane, shoulder flexion"),
+  X("sa_row","Single-Arm Dumbbell Row",["xupper"],["lats","rhomboids","midTrap"],["postDelt","biceps","brachialis","erectorSpinae","rotatorCuff"],"Horizontal pull, sagittal-plane shoulder extension with scapular retraction"),
+  X("rev_fly","Bent-Over Reverse Fly",["xupper"],["postDelt","midTrap","rhomboids"],["rotatorCuff","lowerTrap","erectorSpinae"],"Transverse plane, shoulder horizontal abduction"),
+  X("band_pull_apart","Band Pull-Apart",["xupper"],["postDelt","midTrap","rhomboids"],["rotatorCuff","lowerTrap"],"Transverse plane, shoulder horizontal abduction"),
+  X("shrug","Dumbbell Shrug",["xupper"],["upperTrap","levatorScap"],["rhomboids","forearmFlex"],"Frontal plane, scapular elevation"),
+  X("reverse_curl","Reverse Curl",["xupper"],["brachialis"],["biceps","forearmExt"],"Sagittal plane, elbow flexion in a pronated grip"),
+  X("wrist_curls","Wrist Curl and Wrist Extension",["xupper"],["forearmFlex","forearmExt"],[],"Sagittal plane, wrist flexion and extension"),
+  // Extra: lower body and glutes
+  X("goblet_squat","Goblet Squat",["xlower"],["quads","gluteMax"],["adductors","hamstrings","erectorSpinae","rectusAbd","calves"],"Sagittal plane, combined hip and knee extension"),
+  X("sumo_squat","Sumo Squat",["xlower"],["gluteMax","adductors","quads"],["gluteMed","deepRotators","hamstrings","calves"],"Sagittal-plane squat with the hips abducted and externally rotated"),
+  X("bulgarian","Bulgarian Split Squat",["xlower"],["quads","gluteMax"],["adductors","hamstrings","gluteMed","calves","hipFlexors"],"Sagittal plane, unilateral hip and knee extension (rear leg hip flexors stretched)"),
+  X("reverse_lunge","Reverse Lunge",["xlower"],["gluteMax","quads"],["hamstrings","adductors","gluteMed","calves"],"Sagittal plane, step back then extend the front hip and knee"),
+  X("lateral_lunge","Lateral Lunge",["xlower"],["gluteMax","quads","adductors"],["hamstrings","gluteMed","tfl","calves"],"Frontal plane, side-to-side weight shift with hip flexion"),
+  X("curtsy_lunge","Curtsy Lunge",["xlower"],["gluteMax","gluteMed","quads"],["adductors","tfl","hamstrings","deepRotators"],"Frontal and transverse planes, hip adduction and external rotation under load"),
+  X("rdl","Dumbbell Romanian Deadlift",["xlower"],["hamstrings","gluteMax"],["erectorSpinae","adductors","qLumborum","lats","trapezius","forearmFlex"],"Sagittal plane, hip hinge with a neutral spine"),
+  X("sl_rdl","Single-Leg Romanian Deadlift",["xlower"],["hamstrings","gluteMax"],["gluteMed","erectorSpinae","qLumborum","adductors","fibularis"],"Sagittal-plane hinge with transverse-plane anti-rotation of the pelvis"),
+  X("hip_thrust","Hip Thrust",["xlower"],["gluteMax"],["hamstrings","adductors","gluteMed","quads","erectorSpinae","rectusAbd"],"Sagittal plane, hip extension through a full range"),
+  X("sl_bridge","Single-Leg Glute Bridge",["xlower"],["gluteMax","hamstrings"],["gluteMed","erectorSpinae","adductors","quads"],"Sagittal-plane hip extension with frontal-plane pelvic stability"),
+  X("donkey_kick","Donkey Kick",["xlower"],["gluteMax"],["hamstrings","erectorSpinae","obliques"],"Sagittal plane, hip extension (quadruped)"),
+  X("fire_hydrant","Fire Hydrant",["xlower"],["gluteMed"],["deepRotators","tfl","gluteMax","obliques","qLumborum"],"Frontal and transverse planes, hip abduction with external rotation"),
+  X("clamshell","Clamshell",["xlower"],["gluteMed","deepRotators"],["gluteMax","tfl","obliques"],"Transverse plane, open-chain hip external rotation"),
+  X("slider_curl","Slider or Towel Hamstring Curl",["xlower"],["hamstrings","calves"],["gluteMax","adductors","erectorSpinae","rectusAbd"],"Sagittal plane, knee flexion with an isometric hip-extension hold"),
+  X("seated_calf","Seated Calf Raise",["xlower"],["calves"],["fibularis"],"Sagittal plane, ankle plantarflexion with the knee bent (soleus emphasis)"),
+  X("tib_raise","Tibialis Raise",["xlower"],["tibialisAnt"],[],"Sagittal plane, ankle dorsiflexion"),
+  // Extra: HIIT and conditioning
+  X("burpee","Burpee",["xhiit"],["quads","gluteMax","pecMajor","antDelt","triceps"],["hamstrings","calves","rectusAbd","transverseAbd","serratusAnt","erectorSpinae"],"Sagittal plane, squat then plank then push-up then explosive jump"),
+  X("butt_kicks","Butt Kicks",["xhiit"],["hamstrings"],["calves","gluteMax","quads","tibialisAnt"],"Sagittal plane, rapid knee flexion while running in place"),
+  X("jump_rope","Jump Rope",["xhiit"],["calves"],["tibialisAnt","quads","forearmFlex","antDelt","rectusAbd"],"Sagittal plane, repeated ankle plantarflexion with small hops"),
+  X("tuck_jumps","Tuck Jumps",["xhiit"],["quads","gluteMax","calves","hipFlexors"],["hamstrings","rectusAbd","tibialisAnt"],"Sagittal plane, vertical triple extension then hip and knee flexion in the air"),
+  X("plank_jacks","Plank Jacks",["xhiit"],["rectusAbd","transverseAbd","antDelt","serratusAnt"],["gluteMed","tfl","adductors","pecMajor","quads"],"Frontal-plane leg abduction and adduction in a sagittal-plane plank"),
+  X("squat_thrusts","Squat Thrusts",["xhiit"],["quads","gluteMax","rectusAbd","hipFlexors"],["hamstrings","antDelt","triceps","serratusAnt","calves"],"Sagittal plane, alternating hip and knee flexion from a plank position"),
+  // Mobility A: hips and legs
+  X("hip_cars","Hip CARs",["mobA"],["gluteMax","deepRotators","adductors","quads"],["hipFlexors","gluteMed","qLumborum","obliques","transverseAbd"],"Circumduction of the hip: flexion, abduction, external rotation, extension (3 per direction, each leg)"),
+  X("ankle_wall","Ankle: knee to wall",["mobA"],["calves"],["tibialisAnt","quads","fibularis"],"Sagittal plane, weight-bearing ankle dorsiflexion (10 per leg)"),
+  X("ninety_ninety","90/90 with transitions",["mobA"],["gluteMax","deepRotators","gluteMed","tfl"],["obliques","erectorSpinae","hipFlexors"],"Transverse plane, alternating hip internal and external rotation (8 transitions, 30 s hold per side)"),
+  X("frog_rock","Frog rock",["mobA"],["adductors"],["gluteMax","deepRotators","erectorSpinae","transverseAbd"],"Frontal-plane hip abduction with sagittal-plane rocking (10 rocks, 30 s hold)"),
+  X("couch_stretch","Couch stretch",["mobA"],["quads","hipFlexors","sartorius","tfl"],["gluteMax","rectusAbd","obliques"],"Sagittal plane, hip extension with knee flexion (60 s per leg)"),
+  X("strap_hamstring","Hamstring lengthening with strap",["mobA"],["hamstrings","calves"],["hipFlexors","quads"],"Sagittal plane, hip flexion with the knee extended; PAILs then RAILs (45 s + 2 contractions per leg)"),
+  X("cossack_shift","Cossack shift",["mobA"],["adductors","hamstrings","calves"],["gluteMax","quads","gluteMed","tibialisAnt","deepRotators"],"Frontal plane, side-to-side weight shift (8 per side, holding a chair)"),
+  X("deep_squat_sit","Deep squat sit",["mobA"],["gluteMax","adductors","calves","erectorSpinae"],["tibialisAnt","quads","transverseAbd"],"Sagittal plane, deep hip and knee flexion with ankle dorsiflexion (2 x 60 s)"),
+  // Mobility B: shoulders, thoracic spine, wrists
+  X("shoulder_cars","Shoulder CARs",["mobB"],["pecMajor","lats"],["rotatorCuff","deltoid","serratusAnt","trapezius","rhomboids"],"Circumduction of the shoulder with scapular movement (3 per direction, each arm)"),
+  X("pass_throughs","Stick pass-throughs",["mobB"],["pecMajor","deltoid","lats"],["serratusAnt","trapezius","rhomboids","triceps","rotatorCuff"],"Sagittal plane, shoulder flexion past 150 degrees then extension behind the body (10)"),
+  X("open_book","Open book",["mobB"],["pecMajor","obliques"],["rhomboids","trapezius","deltoid","erectorSpinae"],"Transverse plane, thoracic rotation with shoulder horizontal abduction (8 per side)"),
+  X("thread_needle","Thread the needle",["mobB"],["deltoid","rotatorCuff","rhomboids","trapezius","erectorSpinae"],["obliques","serratusAnt"],"Transverse plane, thoracic rotation with shoulder horizontal adduction then abduction (8 per side)"),
+  X("wall_slides","Wall slides",["mobB"],["pecMajor","lats"],["serratusAnt","trapezius","deltoid","rotatorCuff"],"Scapular plane, scapular upward rotation with shoulder flexion (2 x 10)"),
+  X("doorway_chest","Doorway chest stretch",["mobB"],["pecMajor","deltoid","biceps"],["rhomboids","trapezius"],"Transverse plane, shoulder horizontal abduction with external rotation (45 s per side)"),
+  X("prone_ytw","Prone Y-T-W",["mobB"],["pecMajor"],["trapezius","serratusAnt","deltoid","rhomboids","rotatorCuff","erectorSpinae"],"Y: scapular-plane elevation. T: horizontal abduction. W: external rotation with retraction (6 per shape)"),
+  X("wrist_prep","Wrist prep",["mobB"],["forearmFlex","forearmExt"],[],"Sagittal-plane flexion and extension with radial and ulnar deviation (60 s)"),
+  // Mobility C: spine and floor movement
+  X("cat_cow","Cat-cow, segmental",["mobC"],["erectorSpinae","rhomboids","rectusAbd","obliques"],["serratusAnt","trapezius"],"Sagittal plane, spinal flexion and extension one segment at a time (8 slow)"),
+  X("side_bend","Standing side bend with stick",["mobC"],["lats","qLumborum","obliques","serratusAnt"],["deltoid","trapezius","gluteMed"],"Frontal plane, lateral flexion of the spine (30 s per side)"),
+  X("stick_rotation","Stick behind the neck rotation",["mobC"],["obliques"],["erectorSpinae","transverseAbd","rhomboids","deltoid"],"Transverse plane, thoracic rotation on a fixed pelvis (10 per direction)"),
+  X("beast_reach","Beast reach",["mobC"],["forearmFlex","lats"],["quads","rectusAbd","transverseAbd","deltoid","serratusAnt","obliques","triceps"],"Sagittal-plane reach with transverse-plane anti-rotation, mostly isometric (3 x 20 s)"),
+  X("bear_crawl","Bear crawl",["mobC"],["forearmFlex","calves"],["deltoid","serratusAnt","pecMajor","triceps","quads","rectusAbd","obliques","hipFlexors","gluteMed","forearmExt"],"Sagittal-plane locomotion with contralateral limb coordination (4 steps forward and back, 3 times)"),
+  X("crab_reach","Crab reach",["mobC"],["pecMajor","deltoid","biceps","rectusAbd","hipFlexors","quads","forearmFlex"],["gluteMax","hamstrings","triceps","rhomboids","obliques"],"Sagittal-plane hip extension plus transverse-plane thoracic rotation (5 per side)"),
+  X("getup_no_hands","Get-up without hands",["mobC"],["calves","deepRotators"],["rectusAbd","hipFlexors","quads","gluteMax","obliques","erectorSpinae","adductors","tibialisAnt","gluteMed"],"Multi-planar floor-to-stand transition (5 attempts)"),
+  X("childs_pose","Child's pose with breathing",["mobC","yoga"],["lats","erectorSpinae","qLumborum","gluteMax","deepRotators","quads","tibialisAnt"],[],"Sagittal plane, flexion of the hips, knees and spine with the shoulders flexed (60 s)"),
+  // Long yoga session
+  X("downward_dog","Downward dog",["yoga"],["calves","hamstrings","lats","pecMajor","erectorSpinae"],["deltoid","serratusAnt","triceps","quads","transverseAbd"],"Sagittal plane, shoulder flexion with hip flexion in an inverted V"),
+  X("sun_salutation","Modified sun salutation",["yoga"],["hamstrings","calves","hipFlexors","rectusAbd","erectorSpinae","pecMajor"],["deltoid","serratusAnt","quads","gluteMax","trapezius","rhomboids"],"Sagittal plane flowing through shoulder flexion, forward fold, back lunge and low cobra (4 rounds)"),
+  X("warrior2","Warrior 2",["yoga"],["adductors","gluteMax","pecMajor"],["quads","gluteMed","deltoid","rotatorCuff","erectorSpinae"],"Frontal plane, hip abduction with front-hip external rotation"),
+  X("side_angle","Extended side angle",["yoga"],["lats","obliques","qLumborum","adductors","hamstrings"],["quads","gluteMed","deltoid","rotatorCuff"],"Frontal plane, lateral spinal flexion with hip abduction"),
+  X("triangle","Triangle with hand on a block",["yoga"],["hamstrings","adductors","obliques","qLumborum","lats"],["quads","gluteMed","rhomboids","deltoid"],"Frontal plane, lateral flexion with thoracic rotation"),
+  X("lizard_pyramid","Lizard and pyramid",["yoga"],["hipFlexors","quads","adductors","gluteMax","hamstrings","calves"],["tibialisAnt","transverseAbd","erectorSpinae"],"Sagittal and frontal planes, hip flexion with abduction and external rotation (60 s per pose)"),
+  X("pigeon","Half pigeon or figure-4",["yoga"],["gluteMax","deepRotators","gluteMed","tfl"],["obliques"],"Transverse plane, hip external rotation with hip flexion (90 s per side)"),
+  X("bound_angle","Bound angle and wide-angle seated fold",["yoga"],["adductors","sartorius","hamstrings","calves","erectorSpinae"],["deepRotators","hipFlexors","rectusAbd","quads"],"Frontal-plane hip abduction with sagittal-plane hip flexion (90 s each)"),
+  X("supported_bridge","Supported bridge",["yoga"],["rectusAbd","hipFlexors","quads","pecMajor"],["gluteMax","hamstrings","erectorSpinae"],"Sagittal plane, hip and spinal extension on a block (60 s)"),
+  X("happy_baby","Happy baby",["yoga"],["adductors","hamstrings","gluteMax","erectorSpinae"],["hipFlexors","biceps","brachialis"],"Sagittal plane hip flexion with abduction (60 s)"),
+  X("supine_twist","Supine twist",["yoga"],["obliques","qLumborum","gluteMax","tfl","pecMajor"],[],"Transverse plane, spinal rotation (60 s per side)"),
+  // Fascia release (primary = muscles under the roller or ball)
+  X("roll_foot","Roll: sole of the foot (ball)",["fascia"],["footFlexors"],[],"Rolling pressure, 60 s per foot. Avoid the heel bone and the big-toe joint"),
+  X("roll_calf","Roll: calf (roller)",["fascia"],["calves"],[],"Rolling pressure, 60 s per leg. Avoid the back of the knee and the Achilles insertion"),
+  X("roll_quad","Roll: front of the thigh (roller)",["fascia"],["quads"],[],"Rolling pressure, 60 s per leg. Avoid the kneecap and the hip bone points"),
+  X("roll_outer_thigh","Roll: outer thigh (roller)",["fascia"],["quads"],[],"Vastus lateralis, 45 s per leg. Avoid the greater trochanter and the iliotibial band itself"),
+  X("roll_inner_thigh","Roll: inner thigh (roller)",["fascia"],["adductors"],[],"Rolling pressure, 60 s per leg. Avoid the groin and the inside of the knee"),
+  X("roll_glutes","Roll: glutes (ball against wall)",["fascia"],["gluteMax","gluteMed","deepRotators"],[],"Rolling pressure, 60 s per side. Avoid the sacrum, tailbone and sciatic notch"),
+  X("roll_upper_back","Roll: upper back (roller)",["fascia"],["erectorSpinae","rhomboids","trapezius"],[],"Rolling pressure, 60 s, only from the bottom of the shoulder blades upward"),
+  X("roll_lats","Roll: lats (roller)",["fascia"],["lats","serratusAnt"],[],"Rolling pressure, 45 s per side. Avoid the armpit"),
+  X("roll_chest","Roll: chest (ball against wall)",["fascia"],["pecMajor","deltoid"],[],"Rolling pressure, 45 s per side. Avoid the collarbone, armpit and front of the shoulder joint"),
+  // Stick drills (Arnis / Kali)
+  X("stick_stance","Basic fighting stance",["stick1"],["quads","gluteMed","calves"],["tibialisAnt","erectorSpinae","obliques","forearmFlex"],"Isometric, sagittal-plane stance with frontal-plane pelvic stability"),
+  X("stick_footwork","Footwork without a stick",["stick1"],["quads","gluteMed","calves","tibialisAnt"],["adductors","deepRotators","hamstrings","rectusAbd"],"Sagittal and frontal stepping with transverse-plane pivots (3 x 45 s)"),
+  X("figure8","Figure 8",["stick1"],["forearmFlex","forearmExt"],["deltoid","rotatorCuff","biceps","serratusAnt"],"Wrist circumduction with forearm rotation, drawing an eight in front of the body (3 x 30 s per hand)"),
+  X("helicopter","Helicopter",["stick1"],["forearmFlex","forearmExt"],["deltoid","rotatorCuff","serratusAnt","triceps"],"Transverse plane, rotation of the stick overhead by alternating hands (3 x 30 s)"),
+  X("angles_1_5","Angles 1 to 5, slow",["stick1"],["pecMajor","deltoid","lats","triceps","forearmFlex","forearmExt"],["obliques","serratusAnt","quads","gluteMax","erectorSpinae","calves"],"Angles 1-2 diagonal, 3-4 horizontal (transverse), 5 thrust (sagittal); each begins from the hip and trunk (5 rounds per hand)"),
+  X("pass_around","Passing the stick around the body",["stick1"],["forearmFlex","forearmExt","deltoid","obliques"],["rotatorCuff","rhomboids","trapezius","pecMajor"],"Transverse plane, the stick travels around the trunk (10 turns per direction)"),
+  X("strikes_move","Strikes with movement",["stick2"],["quads","gluteMax","calves","obliques","pecMajor","deltoid"],["hamstrings","adductors","tibialisAnt","transverseAbd","forearmFlex"],"Multi-planar: step forward with angle 1, step back with angle 2, pivot with angle 3 (4 x 30 s)"),
+  X("combos_3","Three-strike combinations",["stick2"],["pecMajor","deltoid","lats","obliques","triceps"],["quads","gluteMed","serratusAnt","forearmFlex","forearmExt"],"Alternating diagonal and transverse strikes, trunk rotation leading every blow (5 x each combination)"),
+  X("number_reaction","Number reaction",["stick2"],["pecMajor","deltoid","obliques","quads","calves","tibialisAnt"],["deepRotators","transverseAbd"],"Multi-planar; an unplanned angle called at random trains reaction time (3 x 60 s)"),
+  X("block_attack","Block then attack",["stick2"],["deltoid","trapezius","rotatorCuff","forearmFlex","forearmExt","pecMajor","triceps","obliques"],["serratusAnt","lats","quads","gluteMed"],"Overhead block in the frontal or sagittal plane, then a fast diagonal or horizontal counter-strike (3 x 10 per side)"),
+  X("box_step","Box step",["stick2"],["gluteMed","adductors","quads","calves"],["hamstrings","tibialisAnt","deepRotators","obliques"],"Frontal and sagittal stepping between corners of a one-metre square, with transverse-plane pivots (3 x 40 s)"),
+  X("shadow_fight","Shadow fighting with the stick",["stick3"],["quads","gluteMax","gluteMed","calves","obliques","deltoid","pecMajor","lats","triceps"],["rectusAbd","transverseAbd","hamstrings","adductors","rotatorCuff","forearmFlex"],"Multi-planar continuous movement: strikes, combinations, blocks and escapes (3 rounds x 2 min)"),
+  X("peak_speed","Peak speed intervals",["stick3"],["gluteMax","quads","calves","pecMajor","deltoid","obliques"],["hamstrings","transverseAbd","forearmFlex"],"Angles 1 and 2 alternating at the highest clean speed (6 x 20 s, 40 s rest)"),
+  X("spin_360","360 degree spin",["stick3"],["obliques","deepRotators","gluteMed","tfl","calves"],["quads","deltoid","forearmFlex","transverseAbd"],"Transverse plane, full-body rotation on a fixed pivot foot (3 x 6 per direction)"),
+  X("drop_knee","Drop to a knee and stand",["stick3"],["quads","gluteMax","hipFlexors","rectusAbd"],["hamstrings","adductors","calves","tibialisAnt","obliques"],"Sagittal plane, fast drop into a low lunge then a rapid stand (3 x 8)"),
+  X("weak_hand","Stick work with the weak hand",["stick3"],["forearmFlex","forearmExt","deltoid"],["rotatorCuff","serratusAnt","trapezius"],"As Level 1 drills at lower speed, to build bilateral coordination (5 min)")
+);
+
+function dedupe(arr){ return Array.from(new Set(arr.map(norm))); }
+const EXERCISES = RAW_EXERCISES.map(e => {
+  const primary = dedupe(e.primary);
+  const secondary = dedupe(e.secondary).filter(k => !primary.includes(k));
+  const mobility = e.days.some(d => MOBILITY_GROUPS.includes(d));
+  return {...e, primary, secondary, mobility};
+});
+const exById = {}; EXERCISES.forEach(e => exById[e.id] = e);
+
+// ---------- viewer boot ----------
+const host = document.getElementById("viewer-host");
+const veil = document.getElementById("loading-veil");
+const loadingText = document.getElementById("loading-text");
+
+const STRUCTURE_TO_KEYS = {}; // structureSlug -> [key,...] that reference it
+Object.keys(MUSCLES).forEach(key => {
+  MUSCLES[key].ids.forEach(slug => {
+    (STRUCTURE_TO_KEYS[slug] ||= []).push(key);
+  });
+});
+// Each real/proxy structure resolves a click to ONE owning key (first non-marker wins; markers never own a click).
+const OWNER_OF_STRUCTURE = {};
+Object.keys(MUSCLES).forEach(key => {
+  if (MUSCLES[key].mode === "marker") return;
+  MUSCLES[key].ids.forEach(slug => { if (!OWNER_OF_STRUCTURE[slug]) OWNER_OF_STRUCTURE[slug] = key; });
+});
+
+const ALL_STRUCTURE_IDS = Array.from(new Set(Object.values(MUSCLES).flatMap(m => m.ids))).map(STRUCT);
+
+const STYLE = {
+  none:      null,
+  selected:  {color:"#c98a1f", emissive:"#c98a1f", emissiveIntensity:0.35},
+  primary:   {color:"#c1442d", emissive:"#c1442d", emissiveIntensity:0.35},
+  secondary: {color:"#2f7d74", emissive:"#2f7d74", emissiveIntensity:0.3},
+  dim:       {color:"#9a8fae", opacity:0.35, transparent:true}
+};
+
+let viewer = null;
+
+// Artifact hosting only serves a fixed set of text/image/font/media types, so the
+// real .glb binaries ride as base64 data-URI .txt files alongside the pack instead
+// of at the relative paths the pack's own manifest records. @somakine/core validates
+// every asset.uri as a safe relative path (it explicitly rejects "data:"/"http:" etc.),
+// so the pack itself is left untouched — a custom assetResolver fetches the matching
+// .txt file and hands back the decoded original bytes only when the viewer asks for them.
+async function base64AssetResolver(asset, signal){
+  const filename = asset.uri.split("/").pop();
+  const r = await fetch("data/glb-b64/" + filename + ".txt", { signal });
+  const text = (await r.text()).trim();
+  const base64 = text.slice(text.indexOf(",") + 1);
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function boot(){
+  const res = await fetch("data/pack.json");
+  const pack = await res.json();
+
+  viewer = await createSomakine(host, {
+    dataset: pack,
+    assetResolver: base64AssetResolver,
+    accessibleLabel: "Interactive 3D muscle model",
+    background: null,
+    initialVisibleStructureIds: ALL_STRUCTURE_IDS,
+    zoomLimits: { initialDistanceFactor: 1.15, minDistanceFactor: 0.5, maxDistanceFactor: 2.2 },
+    onAssetProgress(p){
+      loadingText.textContent = "Loading real muscle geometry… " + p.completed + " / " + p.total;
+    },
+    onStateChange(state){
+      if(state.phase === "ready"){ veil.hidden = true; }
+    },
+    onSelection(sel){
+      const slug = sel.structure.id.replace("somakine:structure:", "");
+      const key = OWNER_OF_STRUCTURE[slug];
+      if(key) selectMuscle(key);
+    }
+  });
+
+  document.getElementById("reset-view").addEventListener("click", () => viewer.resetView());
+
+  buildMuscleList();
+  buildDayBrowser();
+  selectMuscle("gluteMax");
+}
+boot().catch(err => {
+  loadingText.textContent = "Could not load the 3D model (" + (err && err.message ? err.message : "unknown error") + ").";
+  console.error(err);
+});
+
+function clearHighlights(){
+  ALL_STRUCTURE_IDS.forEach(id => viewer.setStructureStyle(id, null));
+}
+function paintKey(key, role){
+  const m = MUSCLES[key];
+  if(!m) return;
+  m.ids.forEach(slug => viewer.setStructureStyle(STRUCT(slug), STYLE[role]));
+}
+
+// ---------- panel rendering ----------
+const panel = document.getElementById("panel");
+
+function musclesTrainedBy(key, role){ return EXERCISES.filter(e => e[role].includes(key)); }
+function dayLabel(days){ return days.map(d => { const g = DAYS.find(x=>x.key===d) || {}; return g.short || (g.en && g.en.split(" &mdash; ")[0]) || d; }).join(" + "); }
+
+function exChip(ex, roleClass){
+  const chip = document.createElement("button");
+  chip.className = "chip" + (roleClass ? " "+roleClass : "");
+  chip.innerHTML = ex.name + "<span class=\"day-tag\">" + dayLabel(ex.days) + "</span>";
+  chip.addEventListener("click", () => selectExercise(ex.id));
+  return chip;
+}
+function muscleChip(key, roleClass){
+  const chip = document.createElement("button");
+  chip.className = "chip" + (roleClass ? " "+roleClass : "");
+  chip.textContent = MUSCLES[key].label;
+  chip.addEventListener("click", () => selectMuscle(key));
+  return chip;
+}
+function modeBadge(mode){
+  if(mode === "real") return "";
+  const span = document.createElement("span");
+  span.className = "datamode " + mode;
+  span.textContent = mode === "proxy" ? "shown via nearest real muscle" : "position reference only";
+  return span;
+}
+
+function selectMuscle(key){
+  if(!viewer) return;
+  clearHighlights();
+  const m = MUSCLES[key];
+  if(m.mode === "marker"){ paintKey(key, "dim"); } else { paintKey(key, "selected"); }
+
+  document.querySelectorAll(".muscle-btn").forEach(b => b.classList.toggle("active", b.dataset.key === key));
+
+  const primaryEx = musclesTrainedBy(key, "primary");
+  const secondaryEx = musclesTrainedBy(key, "secondary");
+
+  panel.innerHTML = "";
+  const kicker = document.createElement("p"); kicker.className="kicker"; kicker.textContent="Selected muscle";
+  const h2 = document.createElement("h2"); h2.textContent = m.label;
+  panel.appendChild(kicker); panel.appendChild(h2);
+  const badge = modeBadge(m.mode); if(badge) panel.appendChild(badge);
+  if(m.note){ const n = document.createElement("p"); n.className="note"; n.textContent = m.note; panel.appendChild(n); }
+
+  function block(title, list, roleClass){
+    const b = document.createElement("div"); b.className="role-block";
+    const h3 = document.createElement("h3");
+    h3.innerHTML = "<i style=\"background:" + (roleClass==="primary" ? "var(--accent-primary)" : "var(--accent-secondary)") + "\"></i>" + title + " (" + list.length + ")";
+    b.appendChild(h3);
+    const row = document.createElement("div"); row.className="chip-row";
+    if(list.length === 0){ const none = document.createElement("span"); none.className="sub"; none.textContent="None in this plan."; row.appendChild(none); }
+    else list.forEach(ex => row.appendChild(exChip(ex, roleClass)));
+    b.appendChild(row); panel.appendChild(b);
+  }
+  block("Primary mover in", primaryEx.filter(e => !e.mobility), "primary");
+  block("Secondary / stabilizer in", secondaryEx.filter(e => !e.mobility), "secondary");
+  const stretchedEx = primaryEx.filter(e => e.mobility), activeEx = secondaryEx.filter(e => e.mobility);
+  if(stretchedEx.length || activeEx.length){
+    block("Stretched or targeted in (mobility)", stretchedEx, "primary");
+    block("Actively working in (mobility)", activeEx, "secondary");
+  }
+}
+
+function selectExercise(id){
+  if(!viewer) return;
+  clearHighlights();
+  const ex = exById[id];
+  ex.primary.forEach(k => paintKey(k, MUSCLES[k].mode === "marker" ? "dim" : "primary"));
+  ex.secondary.forEach(k => paintKey(k, MUSCLES[k].mode === "marker" ? "dim" : "secondary"));
+
+  document.querySelectorAll(".muscle-btn").forEach(b => b.classList.remove("active"));
+
+  panel.innerHTML = "";
+  const kicker = document.createElement("p"); kicker.className="kicker"; kicker.textContent = dayLabel(ex.days) + " · exercise";
+  const h2 = document.createElement("h2"); h2.textContent = ex.name;
+  panel.appendChild(kicker); panel.appendChild(h2);
+  const dir = document.createElement("p"); dir.className="direction"; dir.textContent = ex.direction;
+  panel.appendChild(dir);
+
+  function block(title, keys, roleClass){
+    const b = document.createElement("div"); b.className="role-block"; b.style.marginTop="14px";
+    const h3 = document.createElement("h3");
+    h3.innerHTML = "<i style=\"background:" + (roleClass==="primary" ? "var(--accent-primary)" : "var(--accent-secondary)") + "\"></i>" + title;
+    b.appendChild(h3);
+    const row = document.createElement("div"); row.className="chip-row";
+    if(keys.length===0){ const none = document.createElement("span"); none.className="sub"; none.textContent="None."; row.appendChild(none); }
+    else keys.forEach(k => row.appendChild(muscleChip(k, roleClass)));
+    b.appendChild(row); panel.appendChild(b);
+  }
+  block(ex.mobility ? "Stretched or targeted" : "Primary muscles", ex.primary, "primary");
+  block(ex.mobility ? "Actively working or controlling" : "Secondary muscles", ex.secondary, "secondary");
+
+  const markerKeys = ex.primary.concat(ex.secondary).filter(k => MUSCLES[k].mode !== "real");
+  if(markerKeys.length){
+    const note = document.createElement("p"); note.className="note";
+    note.textContent = markerKeys.map(k => MUSCLES[k].label).join(", ") + (markerKeys.length>1?" aren’t":" isn’t") + " modeled as separate meshes in this open dataset — see each muscle's own note above for what's shown instead.";
+    panel.appendChild(note);
+  }
+}
+
+function buildMuscleList(){
+  const list = document.getElementById("muscle-list");
+  Object.keys(MUSCLES).forEach(key => {
+    const btn = document.createElement("button");
+    btn.className = "muscle-btn";
+    btn.dataset.key = key;
+    btn.innerHTML = MUSCLES[key].label + (MUSCLES[key].mode !== "real" ? "<span class=\"tag\">" + MUSCLES[key].mode + "</span>" : "");
+    btn.addEventListener("click", () => selectMuscle(key));
+    list.appendChild(btn);
+  });
+}
+
+function buildDayBrowser(){
+  const daysEl = document.getElementById("days");
+  DAYS.forEach((day, idx) => {
+    const group = document.createElement("div");
+    group.className = "day-group" + (idx===0 ? " open" : "");
+    const head = document.createElement("button");
+    head.className = "day-head";
+    head.innerHTML = "<span><span class=\"en\">" + day.en + "</span></span><span class=\"ar\">" + day.ar + " <span class=\"caret\">&#9656;</span></span>";
+    head.addEventListener("click", () => group.classList.toggle("open"));
+    group.appendChild(head);
+    const list = document.createElement("div"); list.className = "day-list";
+    EXERCISES.filter(e => e.days.includes(day.key)).forEach(ex => {
+      const pill = document.createElement("button");
+      pill.className = "ex-pill"; pill.textContent = ex.name;
+      pill.setAttribute("data-name", ex.name.toLowerCase());
+      pill.addEventListener("click", () => {
+        document.querySelectorAll(".ex-pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        selectExercise(ex.id);
+      });
+      list.appendChild(pill);
+    });
+    group.appendChild(list);
+    daysEl.appendChild(group);
+  });
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll(".day-group").forEach(g => {
+      let any = false;
+      g.querySelectorAll(".ex-pill").forEach(p => {
+        const match = !q || p.getAttribute("data-name").includes(q);
+        p.hidden = !match; if(match) any = true;
+      });
+      if(q) g.classList.toggle("open", any);
+      g.style.display = (q && !any) ? "none" : "";
+    });
+  });
+}
+</script>
+
+</body></html>

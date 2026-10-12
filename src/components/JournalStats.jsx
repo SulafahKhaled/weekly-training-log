@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import JournalList from './journal/JournalList';
-import StatsAdherence from './stats/StatsAdherence';
+import StatsSessions from './stats/StatsSessions';
 import StatsExerciseProgress from './stats/StatsExerciseProgress';
 import StatsBody from './stats/StatsBody';
 import StatsNutrition from './stats/StatsNutrition';
@@ -12,7 +12,7 @@ const SECTIONS = [
 ];
 
 const STATS_VIEWS = [
-  { id: 'adherence', label: 'Adherence' },
+  { id: 'adherence', label: 'Sessions' },
   { id: 'exercise', label: 'Exercises' },
   { id: 'body', label: 'Body' },
   { id: 'nutrition', label: 'Nutrition' },
@@ -43,7 +43,7 @@ export default function JournalStats() {
               </button>
             ))}
           </div>
-          {statsView === 'adherence' && <StatsAdherence />}
+          {statsView === 'adherence' && <StatsSessions />}
           {statsView === 'exercise' && <StatsExerciseProgress />}
           {statsView === 'body' && <StatsBody />}
           {statsView === 'nutrition' && <StatsNutrition />}

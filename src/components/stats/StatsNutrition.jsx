@@ -4,6 +4,7 @@ import { addMonths, today } from '../../lib/dates';
 import LineChart from '../shared/LineChart';
 import Collapsible from '../shared/Collapsible';
 import ProgressRing from '../ProgressRing';
+import MealsList from './MealsList';
 
 const RANGES = [
   { id: '1m', label: '1 month' },
@@ -199,6 +200,7 @@ export default function StatsNutrition() {
           </Collapsible>
         );
       })}
+      <MealsList />
     </div>
   );
 }

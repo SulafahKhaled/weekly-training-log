@@ -111,3 +111,17 @@ Local development always talks to your own Docker Postgres, never the real produ
 - Self-service password reset via email.
 - Editable rep counts and per-set notes.
 - A days-logged-vs-not-logged nutrition adherence view, mirroring the workout Adherence tab.
+
+
+## v3: exercise library, plans, backup & statistics
+
+- **Home → Today's sessions**: the weekday's sessions, plus "Add another day's session" and "Quick-add an exercise". Any day card can be opened and done today; it is logged on today's date, linked to that session.
+- **Library**: browse/filter by muscle, type, day/session; add, edit, duplicate, archive/delete; edit media; "Import media" for a mapping file.
+- **Plans**: create/duplicate/rename/activate; add, remove, reorder, override sets/reps/seconds/rest/countdown; move or swap sessions between days.
+- **Settings & backup**: timing defaults, week start (Sunday), timezone (Asia/Riyadh), stick level, Export/Import JSON. Run `npm test` for the suite.
+- **Mobility tab**: the PDF program; add-ons are optional sessions on each day. Progress tests: Home → Progress tests.
+
+## Claude connector
+
+Home → Connect Claude. Create a token, copy the connector URL (shown once), then in claude.ai: Settings → Connectors → Add custom connector → paste it.
+Then tell Claude "I ate two eggs and toast" or "I did bench press 3×12 at 20 kg". Entries are badged "Claude" and can be edited or deleted. Revoke the token any time.
